@@ -10,10 +10,10 @@ services:
       context: .
       dockerfile: packages/server/Dockerfile
     ports:
-      - "${PORT:-3000}:3000"
+      - "${PORT:-3029}:3029"
     environment:
       - NODE_ENV=production
-      - PORT=3000
+      - PORT=3029
       - REDIS_URL=redis://redis:6379
       - MINIO_ENDPOINT=minio
       - MINIO_PORT=9000
