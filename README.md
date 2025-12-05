@@ -1,83 +1,128 @@
-# Remotion Music Visualization Template
+# GitHub Stats Remotion
 
-<div class='grid' markdown>
-  <img alt='Spectrum Visualizer' width='300px' src='https://github.com/user-attachments/assets/74095cfd-5507-4875-9e55-2b7f66c72287' />
-  <img alt='Waveform Visualizer' width='300px' src='https://github.com/user-attachments/assets/601b760c-952b-4fe4-90f4-527c9e2ad8b3' />
+Animated GitHub stats GIF cards for your profile, powered by [Remotion](https://remotion.dev).
+
+<div align="center">
+  <img alt="Readme Dark Gemini" width="400px" src="./out/readme-dark-gemini.gif" />
+  <img alt="Commit Graph Dark Wave" width="400px" src="./out/commit-graph-dark-wave.gif" />
 </div>
 
-This template allows you to create stunning music visualization videos. Perfect for sharing song previews, album teasers, or music snippets on social media with beautiful visual effects synchronized to your audio.
+## Features
 
-## Commands
+- **5 Card Types** — Readme stats, commit streak, top languages, contribution activity, and commit graph
+- **Light & Dark Themes** — Match your GitHub profile aesthetic
+- **Animated Effects** — Gemini ribbons, wave visualizer, aurora, grid dots, and more
+- **Auto-updating** — GitHub Action renders fresh GIFs every 6 hours
+- **Customizable** — Tweak colors, timing, and effects via settings
 
-**Install Dependencies**
+## Quick Start
 
-```console
+**Install dependencies**
+
+```bash
 bun install
 ```
 
-**Start Preview**
+**Start the Remotion Studio preview**
 
-```console
-npx remotion studio
+```bash
+bun dev
 ```
 
-**Render video**
+**Render all GIFs**
 
-```console
-bunx remotion render
+```bash
+bun run render:all
 ```
 
-**Upgrade Remotion**
+**Render a specific composition**
 
-```console
-bunx remotion upgrade
+```bash
+npx remotion render src/index.ts readme-dark-gemini out/readme-dark-gemini.gif --codec gif
 ```
 
-## Customization
+## Configuration
 
-You can customize your music visualization:
+### Stats Data Source
 
-- Choose between spectrum or waveform visualizer
-- Customize colors, wave patterns, and visual parameters
-- Add your album artwork, song name, and artist name
-- Adjust audio timing and visualization settings
+Configure your stats URL in `src/settings.ts`:
 
-All parameters can be modified in `src/Root.tsx` or directly in the Studio sidebar.
-
-## How do I create my video?
-
-1. Replace the audio file in the `public` folder with your music track
-2. Update the cover artwork in the `public` folder
-3. Adjust the song and artist information
-4. Customize the visualizer settings to match your music style
-
-Then render your video by running clicking "Render" button in Remotion Studio.
-
-Check out the [Remotion docs](/docs/render/) for more rendering options.
-
-## Docs
-
-Get started with Remotion by reading the [fundamentals page](https://www.remotion.dev/docs/the-fundamentals).
-
-## Help
-
-We provide help [on our Discord server](https://discord.gg/6VzzNDwUwV).
-
-## Issues
-
-Found an issue with Remotion? Upgrade Remotion to receive fixes:
-
-```
-bunx remotion upgrade
+```typescript
+export const statsSettings = {
+  // Direct URL to your stats JSON
+  statsUrl: 'https://raw.githubusercontent.com/YourUsername/stats/main/github-user-stats.json',
+  // Fallback usernames (used if statsUrl is empty)
+  usernames: ['YourUsername'],
+};
 ```
 
-Didn't help? [File an issue here](https://github.com/remotion-dev/remotion/issues/new).
+The stats JSON should match the schema expected by the cards. See `src/config.ts` for the full `UserStats` type definition.
 
-## Contributing
+### Customization
 
-The source of this template is in the [Remotion Monorepo](https://github.com/remotion-dev/remotion/tree/main/packages/template-music-visualization).  
-Don't send pull requests here, this is only a mirror.
+All visual settings are centralized in `src/settings.ts`:
+
+- **Animation timing** — Stagger delays, fade durations, counter speed
+- **Effect colors** — Gemini ribbons, aurora, grid dots, beams, contribution graph
+- **Card settings** — Border radius, padding, backdrop blur
+- **Commit graph** — Weeks to show, square size, gap, reveal speed
+
+## GitHub Action
+
+The included workflow (`.github/workflows/render-stats.yml`) automates GIF generation:
+
+- Runs every 6 hours on a schedule
+- Triggers on push to `main`
+- Can be manually triggered via workflow dispatch
+- Fetches fresh stats and renders all compositions
+- Commits updated GIFs to the `out/` folder
+
+## Available Cards
+
+| Card | Variants | Description |
+|------|----------|-------------|
+| **Readme** | `readme-{dark,light}-{gemini,waves}` | Main stats with animated background |
+| **Commit Streak** | `commit-streak-{dark,light}` | Current and longest streak with aurora effect |
+| **Top Languages** | `top-languages-{dark,light}` | Language breakdown with animated bars |
+| **Contribution** | `contribution-{dark,light}` | Activity overview with beam effects |
+| **Commit Graph** | `commit-graph-{dark,light}-{wave,rain,cascade}` | GitHub-style contribution grid |
+
+See [EXAMPLE.md](./EXAMPLE.md) for a full visual gallery of all card variants.
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `bun dev` | Start Remotion Studio |
+| `bun run build` | Bundle for production |
+| `bun run render` | Render default composition |
+| `bun run render:all` | Render all compositions |
+| `bun run upgrade` | Upgrade Remotion |
+| `bun run lint` | Run ESLint and TypeScript checks |
+
+## Project Structure
+
+```
+src/
+├── components/
+│   ├── cards/          # Card components (ReadmeCard, CommitStreakCard, etc.)
+│   ├── effects/        # Visual effects (AuroraEffect, GeminiEffect, etc.)
+│   ├── icons/          # Icon components
+│   └── ui/             # Reusable UI components
+├── data/
+│   ├── defaultStats.ts # Default/fallback stats data
+│   └── fetchers.ts     # Stats fetching utilities
+├── lib/
+│   ├── animations.ts   # Animation utilities
+│   └── utils.ts        # Helper functions
+├── styles/
+│   └── global.css      # Global styles
+├── config.ts           # Zod schemas and type definitions
+├── settings.ts         # Customizable settings
+├── Root.tsx            # Remotion composition definitions
+└── index.ts            # Entry point
+```
 
 ## License
 
-Note that for some entities a company license is needed. Read [the terms here](https://github.com/remotion-dev/remotion/blob/main/LICENSE.md).
+See [LICENSE](./LICENSE) for details.

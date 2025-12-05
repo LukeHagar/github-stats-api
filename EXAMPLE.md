@@ -163,15 +163,15 @@ npx remotion render src/index.ts commit-graph-dark-rain --codec gif
 | `readme-light-gemini` | Main stats with Gemini effect (light) | 450x320 |
 | `readme-dark-waves` | Main stats with wave effect (dark) | 450x320 |
 | `readme-light-waves` | Main stats with wave effect (light) | 450x320 |
-| `commit-streak-dark` | Streak card (dark) | 450x180 |
-| `commit-streak-light` | Streak card (light) | 450x180 |
-| `top-languages-dark` | Languages card (dark) | 450x260 |
-| `top-languages-light` | Languages card (light) | 450x260 |
+| `commit-streak-dark` | Streak card (dark) | 450x200 |
+| `commit-streak-light` | Streak card (light) | 450x200 |
+| `top-languages-dark` | Languages card (dark) | 450x280 |
+| `top-languages-light` | Languages card (light) | 450x280 |
 | `contribution-dark` | Activity card (dark) | 450x140 |
 | `contribution-light` | Activity card (light) | 450x140 |
-| `commit-graph-dark-wave` | Graph with wave animation (dark) | 450x170 |
-| `commit-graph-light-wave` | Graph with wave animation (light) | 450x170 |
-| `commit-graph-dark-rain` | Graph with rain animation (dark) | 450x170 |
-| `commit-graph-light-rain` | Graph with rain animation (light) | 450x170 |
-| `commit-graph-dark-cascade` | Graph with cascade animation (dark) | 450x170 |
-| `commit-graph-light-cascade` | Graph with cascade animation (light) | 450x170 |
+| `commit-graph-dark-wave` | Graph with wave animation (dark) | 450x190 |
+| `commit-graph-light-wave` | Graph with wave animation (light) | 450x190 |
+| `commit-graph-dark-rain` | Graph with rain animation (dark) | 450x190 |
+| `commit-graph-light-rain` | Graph with rain animation (light) | 450x190 |
+| `commit-graph-dark-cascade` | Graph with cascade animation (dark) | 450x190 |
+| `commit-graph-light-cascade` | Graph with cascade animation (light) | 450x190 |
