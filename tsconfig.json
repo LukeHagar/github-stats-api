@@ -1,16 +1,20 @@
 {
   "compilerOptions": {
-    "target": "ES2021",
-    "module": "Preserve",
-    "moduleResolution": "Bundler",
-    "jsx": "react-jsx",
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "strict": true,
-    "noEmit": true,
-    "lib": ["es2015"],
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "noUnusedLocals": true
+    "resolveJsonModule": true,
+    "declaration": true,
+    "noEmit": true
   },
-  "exclude": ["remotion.config.ts"]
+  "references": [
+    { "path": "./packages/remotion" },
+    { "path": "./packages/server" }
+  ],
+  "include": [],
+  "exclude": ["node_modules", "packages"]
 }

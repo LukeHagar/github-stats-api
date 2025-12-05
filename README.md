@@ -1,4 +1,4 @@
-# GitHub Stats Remotion
+# GitHub Stats
 
 Animated GitHub stats GIF cards for your profile, powered by [Remotion](https://remotion.dev).
 
@@ -7,77 +7,93 @@ Animated GitHub stats GIF cards for your profile, powered by [Remotion](https://
   <img alt="Commit Graph Dark Wave" width="400px" src="./out/commit-graph-dark-wave.gif" />
 </div>
 
-## Features
+## Packages
 
-- **5 Card Types** — Readme stats, commit streak, top languages, contribution activity, and commit graph
-- **Light & Dark Themes** — Match your GitHub profile aesthetic
-- **Animated Effects** — Gemini ribbons, wave visualizer, aurora, grid dots, and more
-- **Auto-updating** — GitHub Action renders fresh GIFs every 6 hours
-- **Customizable** — Tweak colors, timing, and effects via settings
+This is a pnpm monorepo with two main packages:
+
+| Package | Description |
+|---------|-------------|
+| [`@github-stats/remotion`](./packages/remotion) | Remotion-based GIF generator with 5 card types and multiple themes |
+| [`@github-stats/server`](./packages/server) | Hono API server with GitHub App integration, Redis queue, and MinIO storage |
 
 ## Quick Start
 
-**Install dependencies**
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) 20+
+- [pnpm](https://pnpm.io/) 9+
+- [Docker](https://docker.com/) (for local development services)
+
+### Install Dependencies
 
 ```bash
-bun install
+pnpm install
 ```
 
-**Start the Remotion Studio preview**
+### Local Development
+
+**1. Start infrastructure (Redis + MinIO)**
 
 ```bash
-bun dev
+pnpm docker:up
 ```
 
-**Render all GIFs**
+This starts:
+- Redis on `localhost:6379` (job queue and caching)
+- MinIO on `localhost:9000` (object storage, console at `:9001`)
+
+**2. Start the Remotion Studio**
 
 ```bash
-bun run render:all
+pnpm dev
 ```
 
-**Render a specific composition**
+Opens the Remotion preview at `http://localhost:3000`
+
+**3. Start the API server (optional)**
 
 ```bash
-npx remotion render src/index.ts readme-dark-gemini out/readme-dark-gemini.gif --codec gif
+# Copy the env example and configure
+cp packages/server/env.example packages/server/.env
+
+# Start the server
+pnpm dev:server
 ```
 
-## Configuration
+**4. Or run everything together**
 
-### Stats Data Source
-
-Configure your stats URL in `src/settings.ts`:
-
-```typescript
-export const statsSettings = {
-  // Direct URL to your stats JSON
-  statsUrl: 'https://raw.githubusercontent.com/YourUsername/stats/main/github-user-stats.json',
-  // Fallback usernames (used if statsUrl is empty)
-  usernames: ['YourUsername'],
-};
+```bash
+pnpm dev:all
 ```
 
-The stats JSON should match the schema expected by the cards. See `src/config.ts` for the full `UserStats` type definition.
+### Render GIFs
 
-### Customization
+```bash
+# Render all compositions
+pnpm render:all
 
-All visual settings are centralized in `src/settings.ts`:
+# Render specific composition
+pnpm render -- readme-dark-gemini
+```
 
-- **Animation timing** — Stagger delays, fade durations, counter speed
-- **Effect colors** — Gemini ribbons, aurora, grid dots, beams, contribution graph
-- **Card settings** — Border radius, padding, backdrop blur
-- **Commit graph** — Weeks to show, square size, gap, reveal speed
+## Available Scripts
 
-## GitHub Action
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start Remotion Studio |
+| `pnpm dev:server` | Start API server |
+| `pnpm dev:worker` | Start background render worker |
+| `pnpm dev:all` | Start all services concurrently |
+| `pnpm render` | Render a composition |
+| `pnpm render:all` | Render all compositions |
+| `pnpm docker:up` | Start Redis + MinIO |
+| `pnpm docker:down` | Stop infrastructure |
+| `pnpm docker:logs` | View infrastructure logs |
+| `pnpm lint` | Lint all packages |
+| `pnpm typecheck` | Type check all packages |
+| `pnpm clean` | Clean all node_modules |
 
-The included workflow (`.github/workflows/render-stats.yml`) automates GIF generation:
-
-- Runs every 6 hours on a schedule
-- Triggers on push to `main`
-- Can be manually triggered via workflow dispatch
-- Fetches fresh stats and renders all compositions
-- Commits updated GIFs to the `out/` folder
-
-## Available Cards
+## Cards
 
 | Card | Variants | Description |
 |------|----------|-------------|
@@ -87,40 +103,56 @@ The included workflow (`.github/workflows/render-stats.yml`) automates GIF gener
 | **Contribution** | `contribution-{dark,light}` | Activity overview with beam effects |
 | **Commit Graph** | `commit-graph-{dark,light}-{wave,rain,cascade}` | GitHub-style contribution grid |
 
-See [EXAMPLE.md](./EXAMPLE.md) for a full visual gallery of all card variants.
+## API Server
 
-## Commands
+The server provides:
 
-| Command | Description |
-|---------|-------------|
-| `bun dev` | Start Remotion Studio |
-| `bun run build` | Bundle for production |
-| `bun run render` | Render default composition |
-| `bun run render:all` | Render all compositions |
-| `bun run upgrade` | Upgrade Remotion |
-| `bun run lint` | Run ESLint and TypeScript checks |
+- **GitHub App Integration** — Install the app to automatically generate stats cards
+- **Webhook Handlers** — Triggers renders on installation and updates
+- **REST API** — Request renders and serve cached images
+- **Background Workers** — Process render jobs with BullMQ
+
+### API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/image/:username/:composition` | Get rendered GIF |
+| `POST /api/render` | Request a new render |
+| `GET /api/status/:jobId` | Check render job status |
+| `GET /api/compositions` | List available compositions |
+
+## Production Deployment
+
+Deploy with Docker Compose or Dokploy:
+
+```bash
+docker compose up -d
+```
+
+See [`docker-compose.yml`](./docker-compose.yml) for the full production stack.
 
 ## Project Structure
 
 ```
-src/
-├── components/
-│   ├── cards/          # Card components (ReadmeCard, CommitStreakCard, etc.)
-│   ├── effects/        # Visual effects (AuroraEffect, GeminiEffect, etc.)
-│   ├── icons/          # Icon components
-│   └── ui/             # Reusable UI components
-├── data/
-│   ├── defaultStats.ts # Default/fallback stats data
-│   └── fetchers.ts     # Stats fetching utilities
-├── lib/
-│   ├── animations.ts   # Animation utilities
-│   └── utils.ts        # Helper functions
-├── styles/
-│   └── global.css      # Global styles
-├── config.ts           # Zod schemas and type definitions
-├── settings.ts         # Customizable settings
-├── Root.tsx            # Remotion composition definitions
-└── index.ts            # Entry point
+├── packages/
+│   ├── remotion/          # GIF generator
+│   │   ├── src/
+│   │   │   ├── components/  # Card and effect components
+│   │   │   ├── data/        # Stats fetchers
+│   │   │   ├── lib/         # Utilities
+│   │   │   └── styles/      # Global CSS
+│   │   └── public/          # Static assets
+│   │
+│   └── server/            # API server
+│       └── src/
+│           ├── config/      # Environment config
+│           ├── routes/      # API routes
+│           ├── services/    # Business logic
+│           └── workers/     # Background jobs
+│
+├── docker-compose.yml     # Production stack
+├── docker-compose.dev.yml # Local development
+└── pnpm-workspace.yaml    # Workspace config
 ```
 
 ## License

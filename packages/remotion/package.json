@@ -1,0 +1,50 @@
+{
+  "name": "@github-stats/remotion",
+  "version": "1.0.0",
+  "description": "Remotion-based GitHub stats GIF generator",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./config": "./src/config.ts",
+    "./settings": "./src/settings.ts"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "render": "remotion render",
+    "render:all": "remotion render readme-dark-gemini && remotion render readme-light-gemini && remotion render commit-streak-dark && remotion render top-languages-dark",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf node_modules .remotion"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.382",
+    "@remotion/media-parser": "4.0.382",
+    "@remotion/media-utils": "4.0.382",
+    "@remotion/google-fonts": "4.0.382",
+    "@remotion/zod-types": "4.0.382",
+    "@remotion/tailwind-v4": "4.0.382",
+    "clsx": "^2.1.1",
+    "framer-motion": "^11.15.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.382",
+    "tailwind-merge": "^2.6.0",
+    "tailwindcss": "4.0.0",
+    "zod": "3.22.3"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.382",
+    "@types/react": "19.0.0",
+    "@types/web": "0.0.166",
+    "eslint": "9.19.0",
+    "typescript": "5.8.2"
+  },
+  "sideEffects": [
+    "*.css"
+  ]
+}
+

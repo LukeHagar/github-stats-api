@@ -1,7 +1,27 @@
-node_modules
-dist
-.DS_Store
-.env
+# Dependencies
+node_modules/
+.pnpm-store/
 
-# Ignore the output video from Git but not videos you import into src/.
-out
+# Build outputs
+dist/
+.remotion/
+out/
+
+# Temp files
+temp/
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Docker
+docker-compose.override.yml

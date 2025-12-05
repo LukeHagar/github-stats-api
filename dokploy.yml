@@ -1,0 +1,121 @@
+# Dokploy deployment configuration
+# https://docs.dokploy.com/
+
+version: "1.0"
+
+services:
+  # Main API service
+  github-stats-api:
+    type: application
+    source:
+      type: github
+      dockerfile: server/Dockerfile
+    domains:
+      - host: "${API_DOMAIN}"
+        port: 3000
+    env:
+      - NODE_ENV=production
+      - PORT=3000
+      - REDIS_URL=redis://github-stats-redis:6379
+      - MINIO_ENDPOINT=github-stats-minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET=github-stats
+      - MINIO_USE_SSL=false
+      - GITHUB_APP_ID=${GITHUB_APP_ID}
+      - GITHUB_APP_PRIVATE_KEY=${GITHUB_APP_PRIVATE_KEY}
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - RENDER_CONCURRENCY=2
+      - PUBLIC_URL=${PUBLIC_URL}
+    healthCheck:
+      enabled: true
+      path: /health
+      interval: 30
+      timeout: 10
+    resources:
+      memory: 1024
+      cpu: 1
+
+  # Background render worker
+  github-stats-worker:
+    type: application
+    source:
+      type: github
+      dockerfile: server/Dockerfile
+    command: ["bun", "run", "server/src/workers/render-worker.ts"]
+    env:
+      - NODE_ENV=production
+      - REDIS_URL=redis://github-stats-redis:6379
+      - MINIO_ENDPOINT=github-stats-minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET=github-stats
+      - MINIO_USE_SSL=false
+      - GITHUB_APP_ID=${GITHUB_APP_ID}
+      - GITHUB_APP_PRIVATE_KEY=${GITHUB_APP_PRIVATE_KEY}
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - RENDER_CONCURRENCY=2
+      - RENDER_TIMEOUT_MS=120000
+    resources:
+      memory: 4096
+      cpu: 2
+
+  # Redis database
+  github-stats-redis:
+    type: redis
+    version: "7"
+    persistence:
+      enabled: true
+      size: 1Gi
+    resources:
+      memory: 256
+      cpu: 0.5
+
+  # MinIO object storage
+  github-stats-minio:
+    type: minio
+    domains:
+      - host: "${MINIO_DOMAIN}"
+        port: 9000
+    env:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      memory: 512
+      cpu: 0.5
+
+# Environment variable templates for Dokploy UI
+envTemplates:
+  - name: API_DOMAIN
+    description: Domain for the API (e.g., api.githubstats.example.com)
+    required: true
+  - name: MINIO_DOMAIN
+    description: Domain for MinIO storage (e.g., storage.githubstats.example.com)
+    required: true
+  - name: PUBLIC_URL
+    description: Public URL for serving images (usually same as MINIO_DOMAIN with https)
+    required: true
+  - name: GITHUB_APP_ID
+    description: GitHub App ID
+    required: true
+  - name: GITHUB_APP_PRIVATE_KEY
+    description: GitHub App private key (PEM format)
+    required: true
+    secret: true
+  - name: GITHUB_WEBHOOK_SECRET
+    description: GitHub webhook secret
+    required: true
+    secret: true
+  - name: MINIO_ACCESS_KEY
+    description: MinIO access key
+    required: true
+    secret: true
+  - name: MINIO_SECRET_KEY
+    description: MinIO secret key
+    required: true
+    secret: true
