@@ -1,57 +1,227 @@
-import "./index.css";
-import { Composition, staticFile } from "remotion";
-import { Visualizer } from "./Visualizer/Main";
-import { visualizerCompositionSchema } from "./helpers/schema";
-import { parseMedia } from "@remotion/media-parser";
+import { CalculateMetadataFunction, Composition, getInputProps } from 'remotion';
+import './styles/global.css';
 
-const FPS = 30;
+import { getUserStats } from './data/fetchers';
+import { Config, mainSchema, MainProps, Theme } from './config';
+import { defaultStats, defaultMusicData } from './data/defaultStats';
+import { ReadmeCard } from './components/cards/ReadmeCard';
+import { CommitStreakCard } from './components/cards/CommitStreakCard';
+import { TopLanguagesCard } from './components/cards/TopLanguagesCard';
+import { ContributionCard } from './components/cards/ContributionCard';
+import { CommitGraphCard } from './components/cards/CommitGraphCard';
 
-export const RemotionRoot: React.FC = () => {
-  return (
-    <>
-      <Composition
-        id="Visualizer"
-        component={Visualizer}
-        width={1080}
-        height={1080}
-        schema={visualizerCompositionSchema}
-        defaultProps={{
-          // audio settings
-          audioOffsetInSeconds: 0,
-          audioFileUrl: staticFile("demo-track.mp3"),
-          // song data
-          coverImageUrl: staticFile("demo-song-cover.jpeg"),
-          songName: "Sunset Render Deja Vu",
-          artistName: "Remotion",
-          textColor: "white",
-          // visualizer settings
-          visualizer: {
-            type: "spectrum" as const,
-            bassOverlay: true,
-            color: "#0b84f3",
-            linesToDisplay: 65,
-            mirrorWave: false,
-            numberOfSamples: "512" as const,
-          },
-        }}
-        // Determine the length of the video based on the duration of the audio file
-        calculateMetadata={async ({ props }) => {
-          const { slowDurationInSeconds } = await parseMedia({
-            src: props.audioFileUrl,
-            fields: {
-              slowDurationInSeconds: true,
-            },
-            acknowledgeRemotionLicense: true,
-          });
+const { FPS, DurationInFrames } = Config;
 
-          return {
-            durationInFrames: Math.floor(
-              (slowDurationInSeconds - props.audioOffsetInSeconds) * FPS,
-            ),
-            fps: FPS,
-          };
-        }}
-      />
-    </>
-  );
+type BackgroundEffect = 'gemini' | 'waves';
+type AnimationStyle = 'wave' | 'rain' | 'cascade';
+
+// Composition configurations
+const compositions: Array<{
+	id: string;
+	component: typeof ReadmeCard | typeof CommitStreakCard | typeof TopLanguagesCard | typeof ContributionCard | typeof CommitGraphCard;
+	width: number;
+	height: number;
+	theme: Theme;
+	backgroundEffect?: BackgroundEffect;
+	animationStyle?: AnimationStyle;
+	includeMusic?: boolean;
+}> = [
+	// =========================================================================
+	// Main README Cards - 4 variants: light/dark + gemini/waves
+	// =========================================================================
+	{
+		id: 'readme-dark-gemini',
+		component: ReadmeCard,
+		width: 450,
+		height: 320,
+		theme: 'dark',
+		backgroundEffect: 'gemini',
+	},
+	{
+		id: 'readme-light-gemini',
+		component: ReadmeCard,
+		width: 450,
+		height: 320,
+		theme: 'light',
+		backgroundEffect: 'gemini',
+	},
+	{
+		id: 'readme-dark-waves',
+		component: ReadmeCard,
+		width: 450,
+		height: 320,
+		theme: 'dark',
+		backgroundEffect: 'waves',
+	},
+	{
+		id: 'readme-light-waves',
+		component: ReadmeCard,
+		width: 450,
+		height: 320,
+		theme: 'light',
+		backgroundEffect: 'waves',
+	},
+
+	// =========================================================================
+	// Commit Streak Cards
+	// =========================================================================
+	{
+		id: 'commit-streak-dark',
+		component: CommitStreakCard,
+		width: 450,
+		height: 200,
+		theme: 'dark',
+	},
+	{
+		id: 'commit-streak-light',
+		component: CommitStreakCard,
+		width: 450,
+		height: 200,
+		theme: 'light',
+	},
+
+	// =========================================================================
+	// Top Languages Cards
+	// =========================================================================
+	{
+		id: 'top-languages-dark',
+		component: TopLanguagesCard,
+		width: 450,
+		height: 280,
+		theme: 'dark',
+	},
+	{
+		id: 'top-languages-light',
+		component: TopLanguagesCard,
+		width: 450,
+		height: 280,
+		theme: 'light',
+	},
+
+	// =========================================================================
+	// Contribution Activity Cards
+	// =========================================================================
+	{
+		id: 'contribution-dark',
+		component: ContributionCard,
+		width: 450,
+		height: 140,
+		theme: 'dark',
+	},
+	{
+		id: 'contribution-light',
+		component: ContributionCard,
+		width: 450,
+		height: 140,
+		theme: 'light',
+	},
+
+	// =========================================================================
+	// Commit Graph Cards - 3 animation styles x 2 themes
+	// =========================================================================
+	// Wave animation
+	{
+		id: 'commit-graph-dark-wave',
+		component: CommitGraphCard,
+		width: 450,
+		height: 190,
+		theme: 'dark',
+		animationStyle: 'wave',
+	},
+	{
+		id: 'commit-graph-light-wave',
+		component: CommitGraphCard,
+		width: 450,
+		height: 190,
+		theme: 'light',
+		animationStyle: 'wave',
+	},
+	// Rain animation
+	{
+		id: 'commit-graph-dark-rain',
+		component: CommitGraphCard,
+		width: 450,
+		height: 190,
+		theme: 'dark',
+		animationStyle: 'rain',
+	},
+	{
+		id: 'commit-graph-light-rain',
+		component: CommitGraphCard,
+		width: 450,
+		height: 190,
+		theme: 'light',
+		animationStyle: 'rain',
+	},
+	// Cascade animation
+	{
+		id: 'commit-graph-dark-cascade',
+		component: CommitGraphCard,
+		width: 450,
+		height: 190,
+		theme: 'dark',
+		animationStyle: 'cascade',
+	},
+	{
+		id: 'commit-graph-light-cascade',
+		component: CommitGraphCard,
+		width: 450,
+		height: 190,
+		theme: 'light',
+		animationStyle: 'cascade',
+	},
+];
+
+export const RemotionRoot = () => {
+	const calculateMetadata: CalculateMetadataFunction<MainProps> = async (props) => {
+		const inputProps = getInputProps();
+		const usernames = inputProps.usernames as string[] | undefined;
+
+		let userStats = defaultStats;
+		
+		// Always try to fetch fresh stats (from URL or usernames)
+		try {
+			userStats = await getUserStats(usernames);
+		} catch (error) {
+			console.error('Failed to fetch user stats, using defaults:', error);
+		}
+
+		return {
+			props: {
+				...props.props,
+				userStats,
+			},
+		};
+	};
+
+	return (
+		<>
+			{compositions.map(({ id, component: Component, width, height, theme, backgroundEffect, animationStyle, includeMusic }) => (
+				<Composition
+					key={id}
+					id={id}
+					component={(props: MainProps) => (
+						<Component
+							userStats={props.userStats}
+							theme={theme}
+							{...(backgroundEffect && { backgroundEffect })}
+							{...(animationStyle && { animationStyle })}
+							{...(includeMusic && { musicData: defaultMusicData })}
+						/>
+					)}
+					durationInFrames={DurationInFrames}
+					fps={FPS}
+					width={width}
+					height={height}
+					schema={mainSchema}
+					calculateMetadata={calculateMetadata}
+					defaultProps={{
+						userStats: defaultStats,
+						theme,
+						...(includeMusic && { musicData: defaultMusicData }),
+					}}
+				/>
+			))}
+		</>
+	);
 };

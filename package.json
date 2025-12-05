@@ -1,8 +1,8 @@
 {
   "name": "github-stats-remotion",
-  "version": "1.0.0",
-  "description": "My Remotion video",
-  "author": "Igor Samokhovets",
+  "version": "2.0.0",
+  "description": "GitHub Stats GIF Generator with Remotion",
+  "author": "Luke Hagar",
   "repository": {},
   "license": "UNLICENSED",
   "private": true,
@@ -12,12 +12,15 @@
     "@remotion/media-utils": "4.0.382",
     "@remotion/google-fonts": "4.0.382",
     "@remotion/zod-types": "4.0.382",
+    "@remotion/tailwind-v4": "4.0.382",
+    "clsx": "^2.1.1",
+    "framer-motion": "^11.15.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "remotion": "4.0.382",
-    "zod": "3.22.3",
-    "@remotion/tailwind-v4": "4.0.382",
-    "tailwindcss": "4.0.0"
+    "tailwind-merge": "^2.6.0",
+    "tailwindcss": "4.0.0",
+    "zod": "3.22.3"
   },
   "devDependencies": {
     "@remotion/eslint-config-flat": "4.0.382",
@@ -28,9 +31,11 @@
     "typescript": "5.8.2"
   },
   "scripts": {
-    "dev": "remotionb studio",
-    "build": "remotionb bundle",
-    "upgrade": "remotionb upgrade",
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "render": "remotion render",
+    "render:all": "remotion render readme-dark && remotion render readme-light && remotion render commit-streak-dark && remotion render top-languages-dark",
+    "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc"
   },
   "sideEffects": [
