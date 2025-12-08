@@ -13,19 +13,19 @@ services:
       - "${PORT:-3029}:3029"
     environment:
       - NODE_ENV=production
-      - PORT=3029
-      - REDIS_URL=redis://redis:6379
-      - MINIO_ENDPOINT=minio
-      - MINIO_PORT=9000
+      - PORT=${PORT:-3029}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio}
+      - MINIO_PORT=${MINIO_PORT:-9000}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
       - MINIO_BUCKET=${MINIO_BUCKET:-github-stats}
-      - MINIO_USE_SSL=false
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
       - GITHUB_APP_ID=${GITHUB_APP_ID}
       - GITHUB_APP_PRIVATE_KEY=${GITHUB_APP_PRIVATE_KEY}
       - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
       - RENDER_CONCURRENCY=${RENDER_CONCURRENCY:-2}
-      - PUBLIC_URL=${PUBLIC_URL:-http://localhost:9000}
+      - PUBLIC_URL=${PUBLIC_URL:-http://minio:9000}
     depends_on:
       redis:
         condition: service_healthy
@@ -43,13 +43,13 @@ services:
     command: ["bun", "run", "packages/server/src/workers/render-worker.ts"]
     environment:
       - NODE_ENV=production
-      - REDIS_URL=redis://redis:6379
-      - MINIO_ENDPOINT=minio
-      - MINIO_PORT=9000
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio}
+      - MINIO_PORT=${MINIO_PORT:-9000}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
       - MINIO_BUCKET=${MINIO_BUCKET:-github-stats}
-      - MINIO_USE_SSL=false
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
       - GITHUB_APP_ID=${GITHUB_APP_ID}
       - GITHUB_APP_PRIVATE_KEY=${GITHUB_APP_PRIVATE_KEY}
       - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}

@@ -175,3 +175,12 @@ npx remotion render src/index.ts commit-graph-dark-rain --codec gif
 | `commit-graph-light-rain` | Graph with rain animation (light) | 450x190 |
 | `commit-graph-dark-cascade` | Graph with cascade animation (dark) | 450x190 |
 | `commit-graph-light-cascade` | Graph with cascade animation (light) | 450x190 |
+
+---
+
+## Deploying on Dokploy (Docker Compose Native)
+- Services: API + worker (built from `packages/server/Dockerfile`), Redis, and MinIO on the same network.
+- Health: set Dokploy health check path to `/health/ready`.
+- Ports: map host → container `3029` for API; MinIO API `9000`, console `9001`.
+- Required secrets: `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY` (PEM with `\\n` escapes), `GITHUB_WEBHOOK_SECRET`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`.
+- Other envs: `PUBLIC_URL` (public MinIO URL), `API_DOMAIN`, `MINIO_DOMAIN`, optional `REDIS_URL` (include password if enabled), `MINIO_BUCKET`, `MINIO_USE_SSL`, `RENDER_CONCURRENCY`.

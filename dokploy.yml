@@ -9,28 +9,28 @@ services:
     type: application
     source:
       type: github
-      dockerfile: server/Dockerfile
+      dockerfile: packages/server/Dockerfile
     domains:
       - host: "${API_DOMAIN}"
-        port: 3000
+        port: 3029
     env:
       - NODE_ENV=production
-      - PORT=3000
-      - REDIS_URL=redis://github-stats-redis:6379
-      - MINIO_ENDPOINT=github-stats-minio
-      - MINIO_PORT=9000
+      - PORT=3029
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio}
+      - MINIO_PORT=${MINIO_PORT:-9000}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-      - MINIO_BUCKET=github-stats
-      - MINIO_USE_SSL=false
+      - MINIO_BUCKET=${MINIO_BUCKET:-github-stats}
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
       - GITHUB_APP_ID=${GITHUB_APP_ID}
       - GITHUB_APP_PRIVATE_KEY=${GITHUB_APP_PRIVATE_KEY}
       - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
-      - RENDER_CONCURRENCY=2
+      - RENDER_CONCURRENCY=${RENDER_CONCURRENCY:-2}
       - PUBLIC_URL=${PUBLIC_URL}
     healthCheck:
       enabled: true
-      path: /health
+      path: /health/ready
       interval: 30
       timeout: 10
     resources:
@@ -42,22 +42,22 @@ services:
     type: application
     source:
       type: github
-      dockerfile: server/Dockerfile
-    command: ["bun", "run", "server/src/workers/render-worker.ts"]
+      dockerfile: packages/server/Dockerfile
+    command: ["bun", "run", "packages/server/src/workers/render-worker.ts"]
     env:
       - NODE_ENV=production
-      - REDIS_URL=redis://github-stats-redis:6379
-      - MINIO_ENDPOINT=github-stats-minio
-      - MINIO_PORT=9000
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio}
+      - MINIO_PORT=${MINIO_PORT:-9000}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-      - MINIO_BUCKET=github-stats
-      - MINIO_USE_SSL=false
+      - MINIO_BUCKET=${MINIO_BUCKET:-github-stats}
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
       - GITHUB_APP_ID=${GITHUB_APP_ID}
       - GITHUB_APP_PRIVATE_KEY=${GITHUB_APP_PRIVATE_KEY}
       - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
-      - RENDER_CONCURRENCY=2
-      - RENDER_TIMEOUT_MS=120000
+      - RENDER_CONCURRENCY=${RENDER_CONCURRENCY:-2}
+      - RENDER_TIMEOUT_MS=${RENDER_TIMEOUT_MS:-120000}
     resources:
       memory: 4096
       cpu: 2
@@ -119,3 +119,18 @@ envTemplates:
     description: MinIO secret key
     required: true
     secret: true
+  - name: REDIS_URL
+    description: Redis URL (include password if enabled), e.g. redis://:password@redis:6379
+    required: false
+  - name: MINIO_ENDPOINT
+    description: MinIO service hostname inside the network (default: minio)
+    required: false
+  - name: MINIO_BUCKET
+    description: Bucket name for rendered assets (default: github-stats)
+    required: false
+  - name: MINIO_USE_SSL
+    description: Use SSL when connecting to MinIO (default: false inside cluster)
+    required: false
+  - name: RENDER_CONCURRENCY
+    description: Worker concurrency (default: 2)
+    required: false

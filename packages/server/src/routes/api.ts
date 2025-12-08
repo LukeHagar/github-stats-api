@@ -1,6 +1,4 @@
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { zValidator } from '@hono/zod-validator';
+import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import {
   addRenderJob,
   addBulkRenderJobs,
@@ -17,73 +15,182 @@ import {
 } from '../services/storage';
 import { COMPOSITIONS, CompositionId } from '../services/renderer';
 
-export const apiRoutes = new Hono();
+export const apiRoutes = new OpenAPIHono();
 
-// Validation schemas
-const renderRequestSchema = z.object({
-  username: z.string().min(1).max(39),
-  compositionId: z.enum(COMPOSITIONS as unknown as [string, ...string[]]),
-  priority: z.enum(['high', 'normal', 'low']).optional().default('normal'),
+// ============================================================================
+// OpenAPI Schemas
+// ============================================================================
+
+const CompositionIdSchema = z
+  .enum(COMPOSITIONS as unknown as [string, ...string[]])
+  .openapi({
+    description: 'Available composition IDs for rendering',
+    example: 'readme-dark-gemini',
+  });
+
+const PrioritySchema = z.enum(['high', 'normal', 'low']).openapi({
+  description: 'Job priority level',
+  example: 'normal',
 });
 
-const bulkRenderRequestSchema = z.object({
-  username: z.string().min(1).max(39),
-  compositions: z.array(z.enum(COMPOSITIONS as unknown as [string, ...string[]])).optional(),
-  theme: z.enum(['light', 'dark', 'all']).optional().default('all'),
-  priority: z.enum(['high', 'normal', 'low']).optional().default('normal'),
+const ThemeSchema = z.enum(['light', 'dark', 'all']).openapi({
+  description: 'Theme filter for compositions',
+  example: 'dark',
 });
 
-// API documentation
-apiRoutes.get('/', (c) => {
-  return c.json({
-    name: 'GitHub Stats API',
-    version: '1.0.0',
-    endpoints: {
-      'GET /api/image/:username/:composition': {
-        description: 'Get rendered GIF for a user',
-        params: {
-          username: 'GitHub username',
-          composition: `One of: ${COMPOSITIONS.join(', ')}`,
+const UsernameParamSchema = z.string().min(1).max(39).openapi({
+  param: { name: 'username', in: 'path' },
+  description: 'GitHub username',
+  example: 'octocat',
+});
+
+const CompositionParamSchema = z.string().openapi({
+  param: { name: 'composition', in: 'path' },
+  description: 'Composition ID',
+  example: 'readme-dark-gemini',
+});
+
+const JobIdParamSchema = z.string().openapi({
+  param: { name: 'jobId', in: 'path' },
+  description: 'Render job ID',
+  example: 'render:octocat:readme-dark-gemini',
+});
+
+// Request schemas
+const RenderRequestSchema = z
+  .object({
+    username: z.string().min(1).max(39),
+    compositionId: CompositionIdSchema,
+    priority: PrioritySchema.optional().default('normal'),
+  })
+  .openapi('RenderRequest');
+
+const BulkRenderRequestSchema = z
+  .object({
+    username: z.string().min(1).max(39),
+    compositions: z.array(CompositionIdSchema).optional(),
+    theme: ThemeSchema.optional().default('all'),
+    priority: PrioritySchema.optional().default('normal'),
+  })
+  .openapi('BulkRenderRequest');
+
+// Response schemas
+const ErrorResponseSchema = z
+  .object({
+    error: z.string(),
+    message: z.string().optional(),
+    valid: z.array(z.string()).optional(),
+  })
+  .openapi('ErrorResponse');
+
+const RenderQueuedResponseSchema = z
+  .object({
+    status: z.literal('rendering'),
+    jobId: z.string(),
+    message: z.string(),
+    statusUrl: z.string(),
+  })
+  .openapi('RenderQueuedResponse');
+
+const RenderSuccessResponseSchema = z
+  .object({
+    success: z.literal(true),
+    jobId: z.string(),
+    statusUrl: z.string(),
+  })
+  .openapi('RenderSuccessResponse');
+
+const BulkRenderResponseSchema = z
+  .object({
+    success: z.literal(true),
+    jobCount: z.number(),
+    jobs: z.array(
+      z.object({
+        id: z.string(),
+        compositionId: z.string(),
+        statusUrl: z.string(),
+      })
+    ),
+  })
+  .openapi('BulkRenderResponse');
+
+const JobStatusResponseSchema = z
+  .object({
+    jobId: z.string(),
+    state: z.string(),
+    progress: z.number(),
+    result: z
+      .object({
+        success: z.boolean(),
+        imageKey: z.string().optional(),
+        imageUrl: z.string().optional(),
+        error: z.string().optional(),
+        renderedAt: z.number(),
+        durationMs: z.number(),
+      })
+      .optional(),
+    imageUrl: z.string().optional(),
+    error: z.string().optional(),
+  })
+  .openapi('JobStatusResponse');
+
+const QueueStatsResponseSchema = z
+  .object({
+    queue: z.string(),
+    stats: z.object({
+      waiting: z.number(),
+      active: z.number(),
+      completed: z.number(),
+      failed: z.number(),
+      delayed: z.number(),
+    }),
+  })
+  .openapi('QueueStatsResponse');
+
+const CompositionsResponseSchema = z
+  .object({
+    total: z.number(),
+    compositions: z.array(z.string()),
+    grouped: z.object({
+      readme: z.array(z.string()),
+      commitStreak: z.array(z.string()),
+      topLanguages: z.array(z.string()),
+      contribution: z.array(z.string()),
+      commitGraph: z.array(z.string()),
+    }),
+  })
+  .openapi('CompositionsResponse');
+
+const HealthResponseSchema = z
+  .object({
+    status: z.string(),
+  })
+  .openapi('HealthResponse');
+
+// ============================================================================
+// Route Definitions
+// ============================================================================
+
+// GET /api/compositions
+const listCompositionsRoute = createRoute({
+  method: 'get',
+  path: '/compositions',
+  tags: ['Compositions'],
+  summary: 'List available compositions',
+  description: 'Returns all available composition IDs grouped by type',
+  responses: {
+    200: {
+      description: 'List of compositions',
+      content: {
+        'application/json': {
+          schema: CompositionsResponseSchema,
         },
-        query: {
-          refresh: 'Set to "true" to force re-render',
-        },
-      },
-      'POST /api/render': {
-        description: 'Request a new render',
-        body: {
-          username: 'GitHub username',
-          compositionId: 'Composition ID',
-          priority: 'high | normal | low (optional)',
-        },
-      },
-      'POST /api/render/bulk': {
-        description: 'Request renders for multiple compositions',
-        body: {
-          username: 'GitHub username',
-          compositions: 'Array of composition IDs (optional, defaults to all)',
-          theme: 'light | dark | all (optional)',
-          priority: 'high | normal | low (optional)',
-        },
-      },
-      'GET /api/status/:jobId': {
-        description: 'Check render job status',
-        params: {
-          jobId: 'Job ID returned from render request',
-        },
-      },
-      'GET /api/queue': {
-        description: 'Get queue statistics',
-      },
-      'GET /api/compositions': {
-        description: 'List available compositions',
       },
     },
-  });
+  },
 });
 
-// List available compositions
-apiRoutes.get('/compositions', (c) => {
+apiRoutes.openapi(listCompositionsRoute, (c) => {
   const grouped = {
     readme: COMPOSITIONS.filter((id) => id.startsWith('readme-')),
     commitStreak: COMPOSITIONS.filter((id) => id.startsWith('commit-streak-')),
@@ -94,35 +201,88 @@ apiRoutes.get('/compositions', (c) => {
 
   return c.json({
     total: COMPOSITIONS.length,
-    compositions: COMPOSITIONS,
+    compositions: [...COMPOSITIONS],
     grouped,
   });
 });
 
-// Get rendered image for a user
-apiRoutes.get('/image/:username/:composition', async (c) => {
-  const username = c.req.param('username');
-  const composition = c.req.param('composition') as CompositionId;
-  const refresh = c.req.query('refresh') === 'true';
+// GET /api/image/:username/:composition
+const getImageRoute = createRoute({
+  method: 'get',
+  path: '/image/{username}/{composition}',
+  tags: ['Images'],
+  summary: 'Get rendered GIF for a user',
+  description:
+    'Returns the rendered GIF image for a user. If not available, queues a render job.',
+  request: {
+    params: z.object({
+      username: UsernameParamSchema,
+      composition: CompositionParamSchema,
+    }),
+    query: z.object({
+      refresh: z
+        .string()
+        .optional()
+        .openapi({
+          description: 'Set to "true" to force re-render',
+          example: 'false',
+        }),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'GIF image',
+      content: {
+        'image/gif': {
+          schema: z.any().openapi({ type: 'string', format: 'binary' }),
+        },
+      },
+    },
+    202: {
+      description: 'Render job queued',
+      content: {
+        'application/json': {
+          schema: RenderQueuedResponseSchema,
+        },
+      },
+    },
+    302: {
+      description: 'Redirect to cached image URL',
+    },
+    400: {
+      description: 'Invalid composition',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+apiRoutes.openapi(getImageRoute, async (c) => {
+  const { username, composition } = c.req.valid('param');
+  const { refresh } = c.req.valid('query');
+  const shouldRefresh = refresh === 'true';
 
   // Validate composition
-  if (!COMPOSITIONS.includes(composition)) {
+  if (!COMPOSITIONS.includes(composition as CompositionId)) {
     return c.json(
       {
         error: 'Invalid composition',
-        valid: COMPOSITIONS,
+        valid: [...COMPOSITIONS],
       },
       400
     );
   }
 
-  const imageKey = getImageKey(username, composition);
+  const compositionId = composition as CompositionId;
+  const imageKey = getImageKey(username, compositionId);
 
   // Check cache first (unless refresh requested)
-  if (!refresh) {
-    const cachedUrl = await cache.getImageUrl(username, composition);
+  if (!shouldRefresh) {
+    const cachedUrl = await cache.getImageUrl(username, compositionId);
     if (cachedUrl) {
-      // Redirect to cached URL
       return c.redirect(cachedUrl, 302);
     }
   }
@@ -130,16 +290,13 @@ apiRoutes.get('/image/:username/:composition', async (c) => {
   // Check if image exists in storage
   const exists = await imageExists(imageKey);
 
-  if (exists && !refresh) {
-    // Get image stats for caching headers
+  if (exists && !shouldRefresh) {
     const stats = await getImageStats(imageKey);
-
-    // Stream the image directly
     const stream = await getImageStream(imageKey);
 
     // Cache the URL
     const publicUrl = getPublicUrl(imageKey);
-    await cache.setImageUrl(username, composition, publicUrl, 3600);
+    await cache.setImageUrl(username, compositionId, publicUrl, 3600);
 
     return new Response(stream as unknown as ReadableStream, {
       headers: {
@@ -154,18 +311,17 @@ apiRoutes.get('/image/:username/:composition', async (c) => {
   // Image doesn't exist or refresh requested - queue a render
   const job = await addRenderJob({
     username,
-    compositionId: composition,
-    theme: composition.includes('light') ? 'light' : 'dark',
+    compositionId,
+    theme: compositionId.includes('light') ? 'light' : 'dark',
     priority: 'normal',
     triggeredBy: 'api',
     requestedAt: Date.now(),
   });
 
-  // Return 202 Accepted with job info
   return c.json(
     {
-      status: 'rendering',
-      jobId: job.id,
+      status: 'rendering' as const,
+      jobId: job.id!,
       message: 'Image is being rendered. Check status at /api/status/:jobId',
       statusUrl: `/api/status/${job.id}`,
     },
@@ -173,8 +329,35 @@ apiRoutes.get('/image/:username/:composition', async (c) => {
   );
 });
 
-// Request a single render
-apiRoutes.post('/render', zValidator('json', renderRequestSchema), async (c) => {
+// POST /api/render
+const renderRoute = createRoute({
+  method: 'post',
+  path: '/render',
+  tags: ['Rendering'],
+  summary: 'Request a new render',
+  description: 'Queue a render job for a specific composition',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: RenderRequestSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Render job created',
+      content: {
+        'application/json': {
+          schema: RenderSuccessResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+apiRoutes.openapi(renderRoute, async (c) => {
   const { username, compositionId, priority } = c.req.valid('json');
 
   const job = await addRenderJob({
@@ -187,14 +370,41 @@ apiRoutes.post('/render', zValidator('json', renderRequestSchema), async (c) => 
   });
 
   return c.json({
-    success: true,
-    jobId: job.id,
+    success: true as const,
+    jobId: job.id!,
     statusUrl: `/api/status/${job.id}`,
   });
 });
 
-// Request bulk renders
-apiRoutes.post('/render/bulk', zValidator('json', bulkRenderRequestSchema), async (c) => {
+// POST /api/render/bulk
+const bulkRenderRoute = createRoute({
+  method: 'post',
+  path: '/render/bulk',
+  tags: ['Rendering'],
+  summary: 'Request bulk renders',
+  description: 'Queue render jobs for multiple compositions at once',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: BulkRenderRequestSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Render jobs created',
+      content: {
+        'application/json': {
+          schema: BulkRenderResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+apiRoutes.openapi(bulkRenderRoute, async (c) => {
   const { username, compositions, theme, priority } = c.req.valid('json');
 
   let compositionsToRender: string[];
@@ -213,19 +423,50 @@ apiRoutes.post('/render/bulk', zValidator('json', bulkRenderRequestSchema), asyn
   });
 
   return c.json({
-    success: true,
+    success: true as const,
     jobCount: jobs.length,
     jobs: jobs.map((job) => ({
-      id: job.id,
+      id: job.id!,
       compositionId: job.data.compositionId,
       statusUrl: `/api/status/${job.id}`,
     })),
   });
 });
 
-// Check job status
-apiRoutes.get('/status/:jobId', async (c) => {
-  const jobId = c.req.param('jobId');
+// GET /api/status/:jobId
+const jobStatusRoute = createRoute({
+  method: 'get',
+  path: '/status/{jobId}',
+  tags: ['Jobs'],
+  summary: 'Check render job status',
+  description: 'Get the current status and result of a render job',
+  request: {
+    params: z.object({
+      jobId: JobIdParamSchema,
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Job status',
+      content: {
+        'application/json': {
+          schema: JobStatusResponseSchema,
+        },
+      },
+    },
+    404: {
+      description: 'Job not found',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+apiRoutes.openapi(jobStatusRoute, async (c) => {
+  const { jobId } = c.req.valid('param');
 
   const status = await getJobStatus(jobId);
 
@@ -233,28 +474,36 @@ apiRoutes.get('/status/:jobId', async (c) => {
     return c.json({ error: 'Job not found' }, 404);
   }
 
-  const response: Record<string, unknown> = {
+  return c.json({
     jobId,
     state: status.state,
     progress: status.progress,
-  };
-
-  if (status.result) {
-    response.result = status.result;
-    if (status.result.imageUrl) {
-      response.imageUrl = status.result.imageUrl;
-    }
-  }
-
-  if (status.failedReason) {
-    response.error = status.failedReason;
-  }
-
-  return c.json(response);
+    result: status.result,
+    imageUrl: status.result?.imageUrl,
+    error: status.failedReason,
+  }, 200);
 });
 
-// Get queue statistics
-apiRoutes.get('/queue', async (c) => {
+// GET /api/queue
+const queueStatsRoute = createRoute({
+  method: 'get',
+  path: '/queue',
+  tags: ['Jobs'],
+  summary: 'Get queue statistics',
+  description: 'Returns current queue statistics including job counts by state',
+  responses: {
+    200: {
+      description: 'Queue statistics',
+      content: {
+        'application/json': {
+          schema: QueueStatsResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+apiRoutes.openapi(queueStatsRoute, async (c) => {
   const stats = await getQueueStats();
 
   return c.json({
@@ -263,7 +512,25 @@ apiRoutes.get('/queue', async (c) => {
   });
 });
 
-// Health check for API
-apiRoutes.get('/health', (c) => {
+// GET /api/health
+const apiHealthRoute = createRoute({
+  method: 'get',
+  path: '/health',
+  tags: ['Health'],
+  summary: 'API health check',
+  description: 'Simple health check for the API routes',
+  responses: {
+    200: {
+      description: 'Healthy',
+      content: {
+        'application/json': {
+          schema: HealthResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+apiRoutes.openapi(apiHealthRoute, (c) => {
   return c.json({ status: 'healthy' });
 });
