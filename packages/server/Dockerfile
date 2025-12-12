@@ -60,11 +60,12 @@ COPY --from=deps /app/package.json ./package.json
 COPY --from=deps /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy package.json files to maintain workspace structure (before copying source)
-COPY --from=deps /app/packages/remotion/package.json ./packages/remotion/package.json
-COPY --from=deps /app/packages/server/package.json ./packages/server/package.json
+# Copy packages directory structure from deps (includes node_modules if they exist)
+# This preserves the complete workspace structure including any package-level node_modules
+# that Bun created during installation
+COPY --from=deps /app/packages ./packages
 
-# Copy source files (this will overwrite package.json files but that's fine)
+# Copy source files (this will overwrite source files but preserve node_modules directories)
 COPY . .
 
 # ============================================================================
