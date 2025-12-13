@@ -20,7 +20,7 @@ export const env = createEnv({
       .url()
       .default(() =>
         process.env.NODE_ENV === "production"
-          ? "redis://redis:6379"
+          ? "redis://app-redis:6379"
           : "redis://localhost:6379"
       ),
 

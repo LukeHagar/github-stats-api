@@ -5,11 +5,11 @@ version: '3.8'
 
 services:
   # Redis for job queue and caching
-  redis:
+  app-redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes --maxmemory-policy noeviction
     volumes:
-      - redis-data:/data
+      - app-redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -58,7 +58,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=${PORT:-3029}
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis://app-redis:6379
       - MINIO_ENDPOINT=minio
       - MINIO_PORT=9000
       - MINIO_ACCESS_KEY=minioadmin
@@ -72,7 +72,7 @@ services:
       # Optional: if set, used to generate absolute URLs (e.g. https://api.example.com)
       - PUBLIC_URL=${PUBLIC_URL:-}
     depends_on:
-      redis:
+      app-redis:
         condition: service_healthy
       minio:
         condition: service_started
@@ -90,7 +90,7 @@ services:
     command: ["bun", "run", "packages/server/src/workers/render-worker.ts"]
     environment:
       - NODE_ENV=production
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis://app-redis:6379
       - MINIO_ENDPOINT=minio
       - MINIO_PORT=9000
       - MINIO_ACCESS_KEY=minioadmin
@@ -105,7 +105,7 @@ services:
       # Optional: if set, used to generate absolute URLs (e.g. https://api.example.com)
       - PUBLIC_URL=${PUBLIC_URL:-}
     depends_on:
-      redis:
+      app-redis:
         condition: service_healthy
       minio:
         condition: service_started
