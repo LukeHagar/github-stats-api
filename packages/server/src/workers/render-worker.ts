@@ -10,6 +10,24 @@ await runStartupChecks({ role: 'worker' });
 
 console.log('🚀 Starting render worker...');
 
+// Process-level crash visibility
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection in worker:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception in worker:', error);
+  process.exit(1);
+});
+
+// Redis connection visibility (the API already logs these; worker should too)
+redis.on('connect', () => console.log('Redis connected (worker)'));
+redis.on('ready', () => console.log('Redis ready (worker)'));
+redis.on('reconnecting', (delay: number) => console.warn(`Redis reconnecting (worker) in ${delay}ms`));
+redis.on('close', () => console.warn('Redis connection closed (worker)'));
+redis.on('end', () => console.warn('Redis connection ended (worker)'));
+redis.on('error', (error) => console.error('Redis connection error (worker):', error));
+
 // Process render jobs
 const worker = new Worker<RenderJobData, RenderJobResult>(
   RENDER_QUEUE,
@@ -88,6 +106,18 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
 );
 
 // Worker event handlers
+worker.on('ready', () => {
+  console.log(`Worker ready. Queue=${RENDER_QUEUE}, concurrency=${env.RENDER_CONCURRENCY}`);
+});
+
+worker.on('active', (job) => {
+  console.log(`Job ${job.id} active: ${job.name}`);
+});
+
+worker.on('progress', (job, progress) => {
+  console.log(`Job ${job.id} progress: ${progress}`);
+});
+
 worker.on('completed', (job, result) => {
   console.log(`Job ${job.id} completed:`, result.success ? 'success' : 'failed');
 });
@@ -102,6 +132,10 @@ worker.on('error', (error) => {
 
 worker.on('stalled', (jobId) => {
   console.warn(`Job ${jobId} stalled`);
+});
+
+worker.on('closed', () => {
+  console.log('Worker closed');
 });
 
 // Graceful shutdown
