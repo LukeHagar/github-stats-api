@@ -92,6 +92,14 @@ export async function addRenderJob(
       console.log(`Job ${jobId} already in queue with state: ${state}`);
       return existingJob;
     }
+
+    // Important: we use deterministic job IDs for dedupe.
+    // If a previous run failed/completed, BullMQ will keep the job around (removeOnFail/removeOnComplete),
+    // which prevents re-adding the same jobId. Remove it so callers can retry on the next request.
+    if (state === "failed" || state === "completed") {
+      console.log(`Removing existing job ${jobId} in state=${state} to allow retry`);
+      await existingJob.remove();
+    }
   }
 
   // Only use BullMQ priority buckets when explicitly requested.
