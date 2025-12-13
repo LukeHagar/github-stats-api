@@ -16,8 +16,8 @@ services:
     env:
       - NODE_ENV=production
       - PORT=3029
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio}
+      - REDIS_URL=${REDIS_URL:-redis://github-stats-redis:6379}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-github-stats-minio}
       - MINIO_PORT=${MINIO_PORT:-9000}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
@@ -46,8 +46,8 @@ services:
     command: ["bun", "run", "packages/server/src/workers/render-worker.ts"]
     env:
       - NODE_ENV=production
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio}
+      - REDIS_URL=${REDIS_URL:-redis://github-stats-redis:6379}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-github-stats-minio}
       - MINIO_PORT=${MINIO_PORT:-9000}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
@@ -120,10 +120,10 @@ envTemplates:
     required: true
     secret: true
   - name: REDIS_URL
-    description: Redis URL (include password if enabled), e.g. redis://:password@redis:6379
+    description: Redis URL (include password if enabled), e.g. redis://:password@github-stats-redis:6379
     required: false
   - name: MINIO_ENDPOINT
-    description: MinIO service hostname inside the network (default: minio)
+    description: "MinIO service hostname inside the network (default: github-stats-minio)"
     required: false
   - name: MINIO_BUCKET
     description: Bucket name for rendered assets (default: github-stats)

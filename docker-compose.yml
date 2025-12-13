@@ -14,8 +14,8 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=${PORT:-3029}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio}
+      - REDIS_URL=${REDIS_URL:-redis://github-stats-redis:6379}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-github-stats-minio}
       - MINIO_PORT=${MINIO_PORT:-9000}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
@@ -26,11 +26,6 @@ services:
       - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
       - RENDER_CONCURRENCY=${RENDER_CONCURRENCY:-2}
       - PUBLIC_URL=${PUBLIC_URL}
-    depends_on:
-      redis:
-        condition: service_healthy
-      minio:
-        condition: service_started
     restart: unless-stopped
     networks:
       - github-stats
@@ -43,8 +38,8 @@ services:
     command: ["bun", "run", "packages/server/src/workers/render-worker.ts"]
     environment:
       - NODE_ENV=production
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio}
+      - REDIS_URL=${REDIS_URL:-redis://github-stats-redis:6379}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-github-stats-minio}
       - MINIO_PORT=${MINIO_PORT:-9000}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
@@ -55,11 +50,6 @@ services:
       - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
       - RENDER_CONCURRENCY=${RENDER_CONCURRENCY:-2}
       - RENDER_TIMEOUT_MS=${RENDER_TIMEOUT_MS:-60000}
-    depends_on:
-      redis:
-        condition: service_healthy
-      minio:
-        condition: service_started
     restart: unless-stopped
     networks:
       - github-stats
@@ -68,41 +58,7 @@ services:
         limits:
           memory: 4G
 
-  # Redis for job queue and caching
-  redis:
-    image: redis:7-alpine
-    volumes:
-      - redis-data:/data
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - github-stats
-
-  # MinIO for object storage
-  minio:
-    image: minio/minio:latest
-    ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
-    volumes:
-      - minio-data:/data
-    environment:
-      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-minioadmin}
-    command: server /data --console-address ":9001"
-    # Note: No healthcheck needed - MinIO starts reliably and API ensures bucket exists
-    restart: unless-stopped
-    networks:
-      - github-stats
-
 volumes:
-  redis-data:
-  minio-data:
 
 networks:
   github-stats:
