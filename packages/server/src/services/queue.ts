@@ -78,7 +78,7 @@ export async function addRenderJob(data: RenderJobData): Promise<Job<RenderJobDa
   const existingJob = await renderQueue.getJob(jobId);
   if (existingJob) {
     const state = await existingJob.getState();
-    if (state === 'waiting' || state === 'active' || state === 'delayed') {
+    if (state === 'waiting' || state === 'active' || state === 'delayed' || state === 'prioritized') {
       console.log(`Job ${jobId} already in queue with state: ${state}`);
       return existingJob;
     }
@@ -148,20 +148,21 @@ export async function getJobStatus(jobId: string): Promise<{
  */
 export async function getQueueStats(): Promise<{
   waiting: number;
+  prioritized: number;
   active: number;
   completed: number;
   failed: number;
   delayed: number;
 }> {
-  const [waiting, active, completed, failed, delayed] = await Promise.all([
-    renderQueue.getWaitingCount(),
-    renderQueue.getActiveCount(),
-    renderQueue.getCompletedCount(),
-    renderQueue.getFailedCount(),
-    renderQueue.getDelayedCount(),
-  ]);
-
-  return { waiting, active, completed, failed, delayed };
+  const counts = await renderQueue.getJobCounts('wait', 'prioritized', 'active', 'completed', 'failed', 'delayed');
+  return {
+    waiting: counts.wait ?? 0,
+    prioritized: counts.prioritized ?? 0,
+    active: counts.active ?? 0,
+    completed: counts.completed ?? 0,
+    failed: counts.failed ?? 0,
+    delayed: counts.delayed ?? 0,
+  };
 }
 
 /**

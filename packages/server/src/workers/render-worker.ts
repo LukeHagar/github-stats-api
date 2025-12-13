@@ -1,5 +1,5 @@
 import { Worker, Job } from 'bullmq';
-import { redis, RENDER_QUEUE, RenderJobData, RenderJobResult, cache } from '../services/queue';
+import { redis, RENDER_QUEUE, RenderJobData, RenderJobResult, cache, renderQueueEvents } from '../services/queue';
 import { renderComposition, CompositionId } from '../services/renderer';
 import { fetchUserStats } from '../services/github';
 import { env } from '../config/env';
@@ -136,6 +136,27 @@ worker.on('stalled', (jobId) => {
 
 worker.on('closed', () => {
   console.log('Worker closed');
+});
+
+// Queue-level visibility (this helps even if worker never picks a job)
+renderQueueEvents.on('waiting', ({ jobId }) => {
+  console.log(`QueueEvent: job waiting: ${jobId}`);
+});
+
+renderQueueEvents.on('active', ({ jobId, prev }) => {
+  console.log(`QueueEvent: job active: ${jobId} (prev=${prev})`);
+});
+
+renderQueueEvents.on('completed', ({ jobId }) => {
+  console.log(`QueueEvent: job completed: ${jobId}`);
+});
+
+renderQueueEvents.on('failed', ({ jobId, failedReason }) => {
+  console.error(`QueueEvent: job failed: ${jobId}: ${failedReason}`);
+});
+
+renderQueueEvents.on('stalled', ({ jobId }) => {
+  console.warn(`QueueEvent: job stalled: ${jobId}`);
 });
 
 // Graceful shutdown

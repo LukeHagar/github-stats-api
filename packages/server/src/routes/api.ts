@@ -137,6 +137,7 @@ const QueueStatsResponseSchema = z
     queue: z.string(),
     stats: z.object({
       waiting: z.number(),
+      prioritized: z.number(),
       active: z.number(),
       completed: z.number(),
       failed: z.number(),
