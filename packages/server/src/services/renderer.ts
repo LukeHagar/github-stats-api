@@ -139,6 +139,8 @@ export async function renderComposition(
       composition,
       serveUrl,
       codec: "gif",
+      // Important: use PNG frames so alpha is preserved (JPEG frames will matte transparency to white).
+      imageFormat: "png",
       scale: renderScale,
       outputLocation: outputPath,
       inputProps: {
