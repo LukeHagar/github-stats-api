@@ -4,6 +4,7 @@ import { env } from '../config/env';
 import { addBulkRenderJobs } from '../services/queue';
 import { deleteUserImages } from '../services/storage';
 import { COMPOSITIONS } from '../services/renderer';
+import { setInstallationId, deleteInstallationId } from '../services/installations';
 
 export const webhookRoutes = new Hono();
 
@@ -31,6 +32,7 @@ webhooks.on('installation.created', async ({ payload }) => {
 
   console.log(`GitHub App installed by: ${username}`);
   const installationId = payload.installation.id;
+  await setInstallationId(username, installationId);
 
   // Queue renders for all compositions
   try {
@@ -57,6 +59,7 @@ webhooks.on('installation.deleted', async ({ payload }) => {
   console.log(`GitHub App uninstalled by: ${username}`);
 
   try {
+    await deleteInstallationId(username);
     await deleteUserImages(username);
     console.log(`Cleaned up images for ${username}`);
   } catch (error) {

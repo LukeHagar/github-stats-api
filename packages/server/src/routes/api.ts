@@ -12,6 +12,8 @@ import {
   getImageKey,
 } from '../services/storage';
 import { COMPOSITIONS, CompositionId } from '../services/renderer';
+import { getInstallationId } from '../services/installations';
+import { env } from '../config/env';
 
 export const apiRoutes = new OpenAPIHono();
 
@@ -97,6 +99,14 @@ const RenderSuccessResponseSchema = z
     statusUrl: z.string(),
   })
   .openapi('RenderSuccessResponse');
+
+const InstallRequiredResponseSchema = z
+  .object({
+    installRequired: z.literal(true),
+    installUrl: z.string().url(),
+    message: z.string(),
+  })
+  .openapi('InstallRequiredResponse');
 
 const BulkRenderResponseSchema = z
   .object({
@@ -230,10 +240,13 @@ const getImageRoute = createRoute({
   },
   responses: {
     200: {
-      description: 'GIF image',
+      description: 'GIF image (if available) or SVG placeholder (if app not installed)',
       content: {
         'image/gif': {
           schema: z.any().openapi({ type: 'string', format: 'binary' }),
+        },
+        'image/svg+xml': {
+          schema: z.any().openapi({ type: 'string' }),
         },
       },
     },
@@ -292,12 +305,43 @@ apiRoutes.openapi(getImageRoute, async (c) => {
     });
   }
 
-  // Image doesn't exist or refresh requested - queue a render
+  // Image doesn't exist or refresh requested - require installation to render (authenticated GitHub App requests)
+  const installationId = await getInstallationId(username);
+  if (!installationId) {
+    const installUrl = env.GITHUB_APP_INSTALL_URL;
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="200" viewBox="0 0 800 200">
+  <rect width="800" height="200" rx="16" fill="#0b1220"/>
+  <text x="40" y="70" fill="#ffffff" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="28" font-weight="700">
+    GitHub Stats: App not installed
+  </text>
+  <text x="40" y="110" fill="#cbd5e1" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="18">
+    User: ${username}
+  </text>
+  <text x="40" y="145" fill="#93c5fd" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="16">
+    Install: ${installUrl}
+  </text>
+  <text x="40" y="175" fill="#94a3b8" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="14">
+    After installing, refresh this image.
+  </text>
+</svg>`;
+
+    return new Response(svg, {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/svg+xml; charset=utf-8',
+        'Cache-Control': 'no-store',
+      },
+    });
+  }
+
+  // Queue a render (authenticated via installationId)
   const job = await addRenderJob({
     username,
     compositionId,
     theme: compositionId.includes('light') ? 'light' : 'dark',
     priority: 'normal',
+    installationId,
     triggeredBy: 'api',
     requestedAt: Date.now(),
   });
@@ -338,26 +382,50 @@ const renderRoute = createRoute({
         },
       },
     },
+    409: {
+      description: 'GitHub App installation required',
+      content: {
+        'application/json': {
+          schema: InstallRequiredResponseSchema,
+        },
+      },
+    },
   },
 });
 
 apiRoutes.openapi(renderRoute, async (c) => {
   const { username, compositionId, priority } = c.req.valid('json');
 
+  const installationId = await getInstallationId(username);
+  if (!installationId) {
+    return c.json(
+      {
+        installRequired: true as const,
+        installUrl: env.GITHUB_APP_INSTALL_URL,
+        message: 'GitHub App installation is required to render images for this user.',
+      },
+      409
+    );
+  }
+
   const job = await addRenderJob({
     username,
     compositionId,
     theme: compositionId.includes('light') ? 'light' : 'dark',
     priority,
+    installationId,
     triggeredBy: 'api',
     requestedAt: Date.now(),
   });
 
-  return c.json({
-    success: true as const,
-    jobId: job.id!,
-    statusUrl: `/api/status/${job.id}`,
-  });
+  return c.json(
+    {
+      success: true as const,
+      jobId: job.id!,
+      statusUrl: `/api/status/${job.id}`,
+    },
+    200
+  );
 });
 
 // POST /api/render/bulk
@@ -385,11 +453,31 @@ const bulkRenderRoute = createRoute({
         },
       },
     },
+    409: {
+      description: 'GitHub App installation required',
+      content: {
+        'application/json': {
+          schema: InstallRequiredResponseSchema,
+        },
+      },
+    },
   },
 });
 
 apiRoutes.openapi(bulkRenderRoute, async (c) => {
   const { username, compositions, theme, priority } = c.req.valid('json');
+
+  const installationId = await getInstallationId(username);
+  if (!installationId) {
+    return c.json(
+      {
+        installRequired: true as const,
+        installUrl: env.GITHUB_APP_INSTALL_URL,
+        message: 'GitHub App installation is required to render images for this user.',
+      },
+      409
+    );
+  }
 
   let compositionsToRender: string[];
 
@@ -403,18 +491,22 @@ apiRoutes.openapi(bulkRenderRoute, async (c) => {
 
   const jobs = await addBulkRenderJobs(username, compositionsToRender, {
     priority,
+    installationId,
     triggeredBy: 'api',
   });
 
-  return c.json({
-    success: true as const,
-    jobCount: jobs.length,
-    jobs: jobs.map((job) => ({
-      id: job.id!,
-      compositionId: job.data.compositionId,
-      statusUrl: `/api/status/${job.id}`,
-    })),
-  });
+  return c.json(
+    {
+      success: true as const,
+      jobCount: jobs.length,
+      jobs: jobs.map((job) => ({
+        id: job.id!,
+        compositionId: job.data.compositionId,
+        statusUrl: `/api/status/${job.id}`,
+      })),
+    },
+    200
+  );
 });
 
 // GET /api/status/:jobId

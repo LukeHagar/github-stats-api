@@ -23,6 +23,7 @@ Only the **API** needs to be exposed publicly (for webhooks + serving images).
 | `GITHUB_APP_ID` | ✅ Yes | No | Your GitHub App ID (numeric) | `123456` |
 | `GITHUB_APP_PRIVATE_KEY` | ✅ Yes | ✅ Yes | GitHub App private key (PEM format, include `\n` as literal newlines) | `-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----` |
 | `GITHUB_WEBHOOK_SECRET` | ✅ Yes | ✅ Yes | Webhook secret configured in GitHub App settings | `your-webhook-secret-here` |
+| `GITHUB_APP_INSTALL_URL` | ✅ Yes | No | GitHub App install URL used in install prompts/placeholder images | `https://github.com/apps/<app-slug>/installations/new` |
 
 ### Optional: Base URL for absolute links
 

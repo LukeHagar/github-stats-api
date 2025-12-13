@@ -69,6 +69,10 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
     console.log(`${prefix} data: ${JSON.stringify(job.data)}`);
 
     try {
+      if (!installationId) {
+        throw new Error(`Install required: ${env.GITHUB_APP_INSTALL_URL}`);
+      }
+
       // Update progress
       await job.updateProgress(10);
       console.log(`${prefix} progress=10 (starting)`);

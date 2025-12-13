@@ -13,6 +13,8 @@ export const env = createEnv({
     GITHUB_APP_ID: z.string().min(1),
     GITHUB_APP_PRIVATE_KEY: z.string().min(1),
     GITHUB_WEBHOOK_SECRET: z.string().min(1),
+    // GitHub App install URL (used for install prompts / placeholders)
+    GITHUB_APP_INSTALL_URL: z.string().url(),
 
     // Redis
     REDIS_URL: z
@@ -54,6 +56,7 @@ export const env = createEnv({
     GITHUB_APP_ID: process.env.GITHUB_APP_ID,
     GITHUB_APP_PRIVATE_KEY: process.env.GITHUB_APP_PRIVATE_KEY,
     GITHUB_WEBHOOK_SECRET: process.env.GITHUB_WEBHOOK_SECRET,
+    GITHUB_APP_INSTALL_URL: process.env.GITHUB_APP_INSTALL_URL,
     REDIS_URL: process.env.REDIS_URL,
     MINIO_ENDPOINT: process.env.MINIO_ENDPOINT,
     MINIO_PORT: process.env.MINIO_PORT,
