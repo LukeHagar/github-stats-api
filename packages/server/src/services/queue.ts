@@ -1,6 +1,6 @@
-import { Queue, QueueEvents, Job } from 'bullmq';
-import Redis from 'ioredis';
-import { env } from '../config/env';
+import { Queue, QueueEvents, Job } from "bullmq";
+import Redis from "ioredis";
+import { env } from "../config/env";
 
 // Shared Redis connection
 export const redis = new Redis(env.REDIS_URL, {
@@ -8,16 +8,16 @@ export const redis = new Redis(env.REDIS_URL, {
 });
 
 // Queue names
-export const RENDER_QUEUE = 'render-jobs';
+export const RENDER_QUEUE = "render-jobs";
 
 // Job types
 export interface RenderJobData {
   username: string;
   compositionId: string;
-  theme: 'light' | 'dark';
-  priority: 'high' | 'normal' | 'low';
+  theme: "light" | "dark";
+  priority: "high" | "normal" | "low";
   installationId?: number;
-  triggeredBy: 'webhook' | 'api' | 'schedule';
+  triggeredBy: "webhook" | "api" | "schedule";
   requestedAt: number;
 }
 
@@ -38,23 +38,26 @@ const PRIORITY_MAP = {
 };
 
 // Create the render queue
-export const renderQueue = new Queue<RenderJobData, RenderJobResult>(RENDER_QUEUE, {
-  connection: redis,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 5000,
+export const renderQueue = new Queue<RenderJobData, RenderJobResult>(
+  RENDER_QUEUE,
+  {
+    connection: redis,
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: {
+        type: "exponential",
+        delay: 5000,
+      },
+      removeOnComplete: {
+        age: 86400, // Keep completed jobs for 24 hours
+        count: 1000, // Keep last 1000 completed jobs
+      },
+      removeOnFail: {
+        age: 604800, // Keep failed jobs for 7 days
+      },
     },
-    removeOnComplete: {
-      age: 86400, // Keep completed jobs for 24 hours
-      count: 1000, // Keep last 1000 completed jobs
-    },
-    removeOnFail: {
-      age: 604800, // Keep failed jobs for 7 days
-    },
-  },
-});
+  }
+);
 
 // Queue events for monitoring
 export const renderQueueEvents = new QueueEvents(RENDER_QUEUE, {
@@ -71,22 +74,34 @@ function getJobId(username: string, compositionId: string): string {
 /**
  * Add a render job to the queue
  */
-export async function addRenderJob(data: RenderJobData): Promise<Job<RenderJobData, RenderJobResult>> {
+export async function addRenderJob(
+  data: RenderJobData
+): Promise<Job<RenderJobData, RenderJobResult>> {
   const jobId = getJobId(data.username, data.compositionId);
 
   // Check if job already exists and is pending/active
   const existingJob = await renderQueue.getJob(jobId);
   if (existingJob) {
     const state = await existingJob.getState();
-    if (state === 'waiting' || state === 'active' || state === 'delayed' || state === 'prioritized') {
+    if (
+      state === "waiting" ||
+      state === "active" ||
+      state === "delayed" ||
+      state === "prioritized"
+    ) {
       console.log(`Job ${jobId} already in queue with state: ${state}`);
       return existingJob;
     }
   }
 
+  // Only use BullMQ priority buckets when explicitly requested.
+  // Keeping "normal" jobs unprioritized avoids them being stuck in the prioritized set in some deployments.
+  const priority =
+    data.priority === "normal" ? undefined : PRIORITY_MAP[data.priority];
+
   const job = await renderQueue.add(data.compositionId, data, {
     jobId,
-    priority: PRIORITY_MAP[data.priority],
+    ...(priority !== undefined ? { priority } : {}),
   });
 
   console.log(`Added render job: ${jobId} with priority ${data.priority}`);
@@ -104,14 +119,14 @@ export async function addBulkRenderJobs(
   const jobs: Job<RenderJobData, RenderJobResult>[] = [];
 
   for (const compositionId of compositionIds) {
-    const theme = compositionId.includes('light') ? 'light' : 'dark';
+    const theme = compositionId.includes("light") ? "light" : "dark";
     const job = await addRenderJob({
       username,
       compositionId,
       theme,
-      priority: options.priority || 'normal',
+      priority: options.priority || "normal",
       installationId: options.installationId,
-      triggeredBy: options.triggeredBy || 'api',
+      triggeredBy: options.triggeredBy || "api",
       requestedAt: Date.now(),
     });
     jobs.push(job);
@@ -154,7 +169,14 @@ export async function getQueueStats(): Promise<{
   failed: number;
   delayed: number;
 }> {
-  const counts = await renderQueue.getJobCounts('wait', 'prioritized', 'active', 'completed', 'failed', 'delayed');
+  const counts = await renderQueue.getJobCounts(
+    "wait",
+    "prioritized",
+    "active",
+    "completed",
+    "failed",
+    "delayed"
+  );
   return {
     waiting: counts.wait ?? 0,
     prioritized: counts.prioritized ?? 0,
@@ -169,8 +191,8 @@ export async function getQueueStats(): Promise<{
  * Clean up old jobs
  */
 export async function cleanQueue(): Promise<void> {
-  await renderQueue.clean(86400 * 1000, 1000, 'completed'); // Clean completed older than 24h
-  await renderQueue.clean(604800 * 1000, 100, 'failed'); // Clean failed older than 7 days
+  await renderQueue.clean(86400 * 1000, 1000, "completed"); // Clean completed older than 24h
+  await renderQueue.clean(604800 * 1000, 100, "failed"); // Clean failed older than 7 days
 }
 
 /**
@@ -201,7 +223,10 @@ export const cache = {
   /**
    * Get cached image URL for a user's composition
    */
-  async getImageUrl(username: string, compositionId: string): Promise<string | null> {
+  async getImageUrl(
+    username: string,
+    compositionId: string
+  ): Promise<string | null> {
     const key = `cache:image:${username}:${compositionId}`;
     return await redis.get(key);
   },
@@ -222,7 +247,10 @@ export const cache = {
   /**
    * Invalidate cached image URL
    */
-  async invalidateImageUrl(username: string, compositionId: string): Promise<void> {
+  async invalidateImageUrl(
+    username: string,
+    compositionId: string
+  ): Promise<void> {
     const key = `cache:image:${username}:${compositionId}`;
     await redis.del(key);
   },
@@ -238,4 +266,3 @@ export const cache = {
     }
   },
 };
-

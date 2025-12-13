@@ -4,7 +4,6 @@ import {
   RENDER_QUEUE,
   RenderJobData,
   RenderJobResult,
-  cache,
   renderQueueEvents,
   renderQueue,
 } from "../services/queue";
@@ -115,12 +114,8 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
         throw new Error(result.error || "Render failed");
       }
 
-      // Cache the image URL
-      if (result.imageUrl) {
-        console.log(`${prefix} caching imageUrl=${result.imageUrl}`);
-        await cache.setImageUrl(username, compositionId, result.imageUrl, 3600);
-        console.log(`${prefix} cached imageUrl`);
-      }
+      // Note: We intentionally do not cache image URLs in Redis anymore.
+      // The API serves images directly from MinIO via /api/image/:username/:composition.
 
       await job.updateProgress(100);
       console.log(`${prefix} progress=100 (done)`);
@@ -161,6 +156,29 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
     },
   }
 );
+
+// Periodic visibility into what the worker sees in Redis
+setInterval(async () => {
+  try {
+    const counts = await renderQueue.getJobCounts(
+      "wait",
+      "prioritized",
+      "active",
+      "delayed",
+      "failed",
+      "completed"
+    );
+    console.log(
+      `QueueCounts: wait=${counts.wait ?? 0} prioritized=${
+        counts.prioritized ?? 0
+      } active=${counts.active ?? 0} delayed=${counts.delayed ?? 0} failed=${
+        counts.failed ?? 0
+      } completed=${counts.completed ?? 0}`
+    );
+  } catch (error) {
+    console.error("QueueCounts: failed to fetch counts:", error);
+  }
+}, 10000);
 
 // Worker event handlers
 worker.on("ready", () => {
