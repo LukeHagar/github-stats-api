@@ -397,6 +397,15 @@ function wireEvents() {
     await queueRenderAll();
   });
 
+  $("#previewAll").addEventListener("click", () => {
+    const username = getUsername();
+    if (!username) {
+      alert("Please enter a username first");
+      return;
+    }
+    window.location.href = `/preview/${encodeURIComponent(username)}`;
+  });
+
   $("#dismissInstall").addEventListener("click", () => hideInstallBanner());
 
   document.querySelectorAll(".chip").forEach((btn) => {

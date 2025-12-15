@@ -9,6 +9,7 @@ const UI_DIR = join(__dirname, "../ui");
 let cachedHtml: string | null = null;
 let cachedJs: string | null = null;
 let cachedCss: string | null = null;
+let cachedPreviewHtml: string | null = null;
 
 async function getHtml(): Promise<string> {
   if (cachedHtml) return cachedHtml;
@@ -26,6 +27,12 @@ async function getCss(): Promise<string> {
   if (cachedCss) return cachedCss;
   cachedCss = await readFile(join(UI_DIR, "app.css"), "utf-8");
   return cachedCss;
+}
+
+async function getPreviewHtmlTemplate(): Promise<string> {
+  if (cachedPreviewHtml) return cachedPreviewHtml;
+  cachedPreviewHtml = await readFile(join(UI_DIR, "preview.html"), "utf-8");
+  return cachedPreviewHtml;
 }
 
 export const uiRoutes = new Hono();
@@ -49,6 +56,20 @@ uiRoutes.get("/assets/app.css", async (c) => {
     "Content-Type": "text/css; charset=utf-8",
     "Cache-Control": "no-store",
   });
+});
+
+uiRoutes.get("/preview/:username", async (c) => {
+  const username = c.req.param("username");
+  const template = await getPreviewHtmlTemplate();
+  // Replace placeholder with actual username (escape for HTML)
+  const escapedUsername = username
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+  const htmlWithUsername = template.replace(/\{\{USERNAME\}\}/g, escapedUsername);
+  return c.html(htmlWithUsername);
 });
 
 

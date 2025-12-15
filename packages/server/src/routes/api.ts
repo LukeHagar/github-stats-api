@@ -10,6 +10,8 @@ import {
   getImageStream,
   getImageStats,
   getImageKey,
+  listUserImages,
+  getPublicUrl,
 } from '../services/storage';
 import { COMPOSITIONS, CompositionId } from '../services/renderer';
 import { getInstallationId } from '../services/installations';
@@ -609,4 +611,63 @@ const apiHealthRoute = createRoute({
 
 apiRoutes.openapi(apiHealthRoute, (c) => {
   return c.json({ status: 'healthy' });
+});
+
+// GET /api/images/:username
+const listUserImagesRoute = createRoute({
+  method: 'get',
+  path: '/images/{username}',
+  tags: ['Images'],
+  summary: 'List all rendered images for a user',
+  description: 'Returns a list of all rendered images (GIFs) for a given username',
+  request: {
+    params: z.object({
+      username: UsernameParamSchema,
+    }),
+  },
+  responses: {
+    200: {
+      description: 'List of rendered images',
+      content: {
+        'application/json': {
+          schema: z.object({
+            username: z.string(),
+            count: z.number(),
+            images: z.array(
+              z.object({
+                key: z.string(),
+                compositionId: z.string(),
+                url: z.string().url(),
+              })
+            ),
+          }),
+        },
+      },
+    },
+  },
+});
+
+apiRoutes.openapi(listUserImagesRoute, async (c) => {
+  const { username } = c.req.valid('param');
+  
+  const imageKeys = await listUserImages(username);
+  
+  const images = imageKeys.map((key) => {
+    // Extract compositionId from key (format: images/${username}/${compositionId}.gif)
+    const parts = key.split('/');
+    const filename = parts[parts.length - 1];
+    const compositionId = filename.replace(/\.gif$/, '');
+    
+    return {
+      key,
+      compositionId,
+      url: getPublicUrl(key),
+    };
+  });
+  
+  return c.json({
+    username,
+    count: images.length,
+    images,
+  });
 });

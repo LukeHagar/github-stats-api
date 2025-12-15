@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Preview: {{USERNAME}} - GitHub Stats</title>
+    <link rel="stylesheet" href="/assets/app.css" />
+    <style>
+      .gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+      }
+      .gallery-item {
+        background: var(--card-bg, #1e293b);
+        border-radius: 8px;
+        padding: 1rem;
+        border: 1px solid var(--border, #334155);
+      }
+      .gallery-item img {
+        width: 100%;
+        height: auto;
+        border-radius: 4px;
+        display: block;
+      }
+      .gallery-item-title {
+        margin-top: 0.75rem;
+        font-size: 0.875rem;
+        color: var(--text-secondary, #cbd5e1);
+        word-break: break-word;
+      }
+      .gallery-item-actions {
+        margin-top: 0.5rem;
+        display: flex;
+        gap: 0.5rem;
+      }
+      .loading {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-secondary, #cbd5e1);
+      }
+      .error {
+        background: var(--danger-bg, #7f1d1d);
+        color: var(--danger-text, #fecaca);
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+      }
+      .empty {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-secondary, #cbd5e1);
+      }
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--link-color, #60a5fa);
+        text-decoration: none;
+        margin-bottom: 1rem;
+      }
+      .back-link:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="header">
+        <div class="brand">
+          <div class="logo">GS</div>
+          <div class="brandText">
+            <div class="title">GitHub Stats</div>
+            <div class="subtitle">Image Preview</div>
+          </div>
+        </div>
+        <nav class="nav">
+          <a class="link" href="/">Back to Render UI</a>
+          <a class="link" href="/api/docs" target="_blank" rel="noreferrer">API Docs</a>
+        </nav>
+      </header>
+
+      <main class="main">
+        <section class="card">
+          <a href="/" class="back-link">← Back to Render UI</a>
+          <h1 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; color: var(--text-primary, #f1f5f9);">
+            Preview: <span id="username">{{USERNAME}}</span>
+          </h1>
+          <div id="meta" class="sectionMeta">Loading images...</div>
+        </section>
+
+        <section class="card">
+          <div id="loading" class="loading">Loading rendered images...</div>
+          <div id="error" class="error hidden"></div>
+          <div id="empty" class="empty hidden">
+            <p>No rendered images found for this username.</p>
+            <p style="margin-top: 1rem;">
+              <a href="/" style="color: var(--link-color, #60a5fa);">Go back to render some images</a>
+            </p>
+          </div>
+          <div id="gallery" class="gallery hidden"></div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div>Previewing all rendered images for {{USERNAME}}</div>
+      </footer>
+    </div>
+
+    <script>
+      // Extract username from URL path
+      const pathMatch = window.location.pathname.match(/^\/preview\/([^/]+)/);
+      const username = pathMatch ? decodeURIComponent(pathMatch[1]) : "";
+      const loadingEl = document.getElementById("loading");
+      const errorEl = document.getElementById("error");
+      const emptyEl = document.getElementById("empty");
+      const galleryEl = document.getElementById("gallery");
+      const metaEl = document.getElementById("meta");
+
+      async function loadImages() {
+        try {
+          const res = await fetch(`/api/images/${encodeURIComponent(username)}`);
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data.error || data.message || `Failed to load images (${res.status})`);
+          }
+
+          loadingEl.classList.add("hidden");
+
+          if (data.count === 0) {
+            emptyEl.classList.remove("hidden");
+            metaEl.textContent = "No images found";
+            return;
+          }
+
+          metaEl.textContent = `${data.count} rendered image${data.count === 1 ? "" : "s"}`;
+          galleryEl.classList.remove("hidden");
+
+          galleryEl.innerHTML = "";
+          for (const image of data.images) {
+            const item = document.createElement("div");
+            item.className = "gallery-item";
+            item.innerHTML = `
+              <img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.compositionId)}" loading="lazy" />
+              <div class="gallery-item-title">${escapeHtml(image.compositionId)}</div>
+              <div class="gallery-item-actions">
+                <button class="btn secondary small" data-action="copy" data-url="${escapeAttr(image.url)}" type="button">
+                  Copy URL
+                </button>
+                <a class="btn secondary small" href="${escapeAttr(image.url)}" target="_blank" rel="noreferrer">
+                  Open
+                </a>
+              </div>
+            `;
+            galleryEl.appendChild(item);
+          }
+
+          // Wire up copy buttons
+          galleryEl.querySelectorAll("button[data-action='copy']").forEach((btn) => {
+            btn.addEventListener("click", async () => {
+              const url = btn.getAttribute("data-url") || "";
+              if (!url) return;
+              const abs = new URL(url, window.location.origin).toString();
+              await navigator.clipboard.writeText(abs);
+              btn.textContent = "Copied";
+              setTimeout(() => (btn.textContent = "Copy URL"), 900);
+            });
+          });
+        } catch (err) {
+          loadingEl.classList.add("hidden");
+          errorEl.classList.remove("hidden");
+          errorEl.textContent = err.message || "Failed to load images";
+          metaEl.textContent = "Error loading images";
+        }
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function escapeAttr(s) {
+        return escapeHtml(s).replaceAll("`", "&#096;");
+      }
+
+      loadImages();
+    </script>
+  </body>
+</html>
+
