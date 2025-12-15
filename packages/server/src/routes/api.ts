@@ -1,10 +1,10 @@
-import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import {
   addRenderJob,
   addBulkRenderJobs,
   getJobStatus,
   getQueueStats,
-} from '../services/queue';
+} from "../services/queue";
 import {
   imageExists,
   getImageStream,
@@ -12,10 +12,10 @@ import {
   getImageKey,
   listUserImages,
   getPublicUrl,
-} from '../services/storage';
-import { COMPOSITIONS, CompositionId } from '../services/renderer';
-import { getInstallationId } from '../services/installations';
-import { env } from '../config/env';
+} from "../services/storage";
+import { COMPOSITIONS, CompositionId } from "../services/renderer";
+import { getInstallationId } from "../services/installations";
+import { env } from "../config/env";
 
 export const apiRoutes = new OpenAPIHono();
 
@@ -26,36 +26,40 @@ export const apiRoutes = new OpenAPIHono();
 const CompositionIdSchema = z
   .enum(COMPOSITIONS as unknown as [string, ...string[]])
   .openapi({
-    description: 'Available composition IDs for rendering',
-    example: 'readme-dark-gemini',
+    description: "Available composition IDs for rendering",
+    example: "readme-dark-gemini",
   });
 
-const PrioritySchema = z.enum(['high', 'normal', 'low']).openapi({
-  description: 'Job priority level',
-  example: 'normal',
+const PrioritySchema = z.enum(["high", "normal", "low"]).openapi({
+  description: "Job priority level",
+  example: "normal",
 });
 
-const ThemeSchema = z.enum(['light', 'dark', 'all']).openapi({
-  description: 'Theme filter for compositions',
-  example: 'dark',
+const ThemeSchema = z.enum(["light", "dark", "all"]).openapi({
+  description: "Theme filter for compositions",
+  example: "dark",
 });
 
-const UsernameParamSchema = z.string().min(1).max(39).openapi({
-  param: { name: 'username', in: 'path' },
-  description: 'GitHub username',
-  example: 'octocat',
-});
+const UsernameParamSchema = z
+  .string()
+  .min(1)
+  .max(39)
+  .openapi({
+    param: { name: "username", in: "path" },
+    description: "GitHub username",
+    example: "octocat",
+  });
 
 const CompositionParamSchema = z.string().openapi({
-  param: { name: 'composition', in: 'path' },
-  description: 'Composition ID',
-  example: 'readme-dark-gemini',
+  param: { name: "composition", in: "path" },
+  description: "Composition ID",
+  example: "readme-dark-gemini",
 });
 
 const JobIdParamSchema = z.string().openapi({
-  param: { name: 'jobId', in: 'path' },
-  description: 'Render job ID',
-  example: 'render:octocat:readme-dark-gemini',
+  param: { name: "jobId", in: "path" },
+  description: "Render job ID",
+  example: "render:octocat:readme-dark-gemini",
 });
 
 // Request schemas
@@ -63,18 +67,18 @@ const RenderRequestSchema = z
   .object({
     username: z.string().min(1).max(39),
     compositionId: CompositionIdSchema,
-    priority: PrioritySchema.optional().default('normal'),
+    priority: PrioritySchema.optional().default("normal"),
   })
-  .openapi('RenderRequest');
+  .openapi("RenderRequest");
 
 const BulkRenderRequestSchema = z
   .object({
     username: z.string().min(1).max(39),
     compositions: z.array(CompositionIdSchema).optional(),
-    theme: ThemeSchema.optional().default('all'),
-    priority: PrioritySchema.optional().default('normal'),
+    theme: ThemeSchema.optional().default("all"),
+    priority: PrioritySchema.optional().default("normal"),
   })
-  .openapi('BulkRenderRequest');
+  .openapi("BulkRenderRequest");
 
 // Response schemas
 const ErrorResponseSchema = z
@@ -83,16 +87,16 @@ const ErrorResponseSchema = z
     message: z.string().optional(),
     valid: z.array(z.string()).optional(),
   })
-  .openapi('ErrorResponse');
+  .openapi("ErrorResponse");
 
 const RenderQueuedResponseSchema = z
   .object({
-    status: z.literal('rendering'),
+    status: z.literal("rendering"),
     jobId: z.string(),
     message: z.string(),
     statusUrl: z.string(),
   })
-  .openapi('RenderQueuedResponse');
+  .openapi("RenderQueuedResponse");
 
 const RenderSuccessResponseSchema = z
   .object({
@@ -100,7 +104,7 @@ const RenderSuccessResponseSchema = z
     jobId: z.string(),
     statusUrl: z.string(),
   })
-  .openapi('RenderSuccessResponse');
+  .openapi("RenderSuccessResponse");
 
 const InstallRequiredResponseSchema = z
   .object({
@@ -108,7 +112,7 @@ const InstallRequiredResponseSchema = z
     installUrl: z.string().url(),
     message: z.string(),
   })
-  .openapi('InstallRequiredResponse');
+  .openapi("InstallRequiredResponse");
 
 const BulkRenderResponseSchema = z
   .object({
@@ -122,7 +126,7 @@ const BulkRenderResponseSchema = z
       })
     ),
   })
-  .openapi('BulkRenderResponse');
+  .openapi("BulkRenderResponse");
 
 const JobStatusResponseSchema = z
   .object({
@@ -142,7 +146,7 @@ const JobStatusResponseSchema = z
     imageUrl: z.string().optional(),
     error: z.string().optional(),
   })
-  .openapi('JobStatusResponse');
+  .openapi("JobStatusResponse");
 
 const QueueStatsResponseSchema = z
   .object({
@@ -156,7 +160,7 @@ const QueueStatsResponseSchema = z
       delayed: z.number(),
     }),
   })
-  .openapi('QueueStatsResponse');
+  .openapi("QueueStatsResponse");
 
 const CompositionsResponseSchema = z
   .object({
@@ -170,13 +174,13 @@ const CompositionsResponseSchema = z
       commitGraph: z.array(z.string()),
     }),
   })
-  .openapi('CompositionsResponse');
+  .openapi("CompositionsResponse");
 
 const HealthResponseSchema = z
   .object({
     status: z.string(),
   })
-  .openapi('HealthResponse');
+  .openapi("HealthResponse");
 
 // ============================================================================
 // Route Definitions
@@ -184,16 +188,16 @@ const HealthResponseSchema = z
 
 // GET /api/compositions
 const listCompositionsRoute = createRoute({
-  method: 'get',
-  path: '/compositions',
-  tags: ['Compositions'],
-  summary: 'List available compositions',
-  description: 'Returns all available composition IDs grouped by type',
+  method: "get",
+  path: "/compositions",
+  tags: ["Compositions"],
+  summary: "List available compositions",
+  description: "Returns all available composition IDs grouped by type",
   responses: {
     200: {
-      description: 'List of compositions',
+      description: "List of compositions",
       content: {
-        'application/json': {
+        "application/json": {
           schema: CompositionsResponseSchema,
         },
       },
@@ -203,11 +207,11 @@ const listCompositionsRoute = createRoute({
 
 apiRoutes.openapi(listCompositionsRoute, (c) => {
   const grouped = {
-    readme: COMPOSITIONS.filter((id) => id.startsWith('readme-')),
-    commitStreak: COMPOSITIONS.filter((id) => id.startsWith('commit-streak-')),
-    topLanguages: COMPOSITIONS.filter((id) => id.startsWith('top-languages-')),
-    contribution: COMPOSITIONS.filter((id) => id.startsWith('contribution-')),
-    commitGraph: COMPOSITIONS.filter((id) => id.startsWith('commit-graph-')),
+    readme: COMPOSITIONS.filter((id) => id.startsWith("readme-")),
+    commitStreak: COMPOSITIONS.filter((id) => id.startsWith("commit-streak-")),
+    topLanguages: COMPOSITIONS.filter((id) => id.startsWith("top-languages-")),
+    contribution: COMPOSITIONS.filter((id) => id.startsWith("contribution-")),
+    commitGraph: COMPOSITIONS.filter((id) => id.startsWith("commit-graph-")),
   };
 
   return c.json({
@@ -219,51 +223,49 @@ apiRoutes.openapi(listCompositionsRoute, (c) => {
 
 // GET /api/image/:username/:composition
 const getImageRoute = createRoute({
-  method: 'get',
-  path: '/image/{username}/{composition}',
-  tags: ['Images'],
-  summary: 'Get rendered GIF for a user',
+  method: "get",
+  path: "/image/{username}/{composition}",
+  tags: ["Images"],
+  summary: "Get rendered WebP image for a user",
   description:
-    'Returns the rendered GIF image for a user. If not available, queues a render job.',
+    "Returns the rendered WebP image for a user. If not available, queues a render job.",
   request: {
     params: z.object({
       username: UsernameParamSchema,
       composition: CompositionParamSchema,
     }),
     query: z.object({
-      refresh: z
-        .string()
-        .optional()
-        .openapi({
-          description: 'Set to "true" to force re-render',
-          example: 'false',
-        }),
+      refresh: z.string().optional().openapi({
+        description: 'Set to "true" to force re-render',
+        example: "false",
+      }),
     }),
   },
   responses: {
     200: {
-      description: 'GIF image (if available) or SVG placeholder (if app not installed)',
+      description:
+        "WebP image (if available) or SVG placeholder (if app not installed)",
       content: {
-        'image/gif': {
-          schema: z.any().openapi({ type: 'string', format: 'binary' }),
+        "image/webp": {
+          schema: z.any().openapi({ type: "string", format: "binary" }),
         },
-        'image/svg+xml': {
-          schema: z.any().openapi({ type: 'string' }),
+        "image/svg+xml": {
+          schema: z.any().openapi({ type: "string" }),
         },
       },
     },
     202: {
-      description: 'Render job queued',
+      description: "Render job queued",
       content: {
-        'application/json': {
+        "application/json": {
           schema: RenderQueuedResponseSchema,
         },
       },
     },
     400: {
-      description: 'Invalid composition',
+      description: "Invalid composition",
       content: {
-        'application/json': {
+        "application/json": {
           schema: ErrorResponseSchema,
         },
       },
@@ -272,15 +274,15 @@ const getImageRoute = createRoute({
 });
 
 apiRoutes.openapi(getImageRoute, async (c) => {
-  const { username, composition } = c.req.valid('param');
-  const { refresh } = c.req.valid('query');
-  const shouldRefresh = refresh === 'true';
+  const { username, composition } = c.req.valid("param");
+  const { refresh } = c.req.valid("query");
+  const shouldRefresh = refresh === "true";
 
   // Validate composition
   if (!COMPOSITIONS.includes(composition as CompositionId)) {
     return c.json(
       {
-        error: 'Invalid composition',
+        error: "Invalid composition",
         valid: [...COMPOSITIONS],
       },
       400
@@ -299,10 +301,12 @@ apiRoutes.openapi(getImageRoute, async (c) => {
 
     return new Response(stream as unknown as ReadableStream, {
       headers: {
-        'Content-Type': 'image/gif',
-        'Cache-Control': 'public, max-age=3600',
+        "Content-Type": "image/webp",
+        "Cache-Control": "public, max-age=3600",
         ...(stats?.etag && { ETag: stats.etag }),
-        ...(stats?.lastModified && { 'Last-Modified': stats.lastModified.toUTCString() }),
+        ...(stats?.lastModified && {
+          "Last-Modified": stats.lastModified.toUTCString(),
+        }),
       },
     });
   }
@@ -331,8 +335,8 @@ apiRoutes.openapi(getImageRoute, async (c) => {
     return new Response(svg, {
       status: 200,
       headers: {
-        'Content-Type': 'image/svg+xml; charset=utf-8',
-        'Cache-Control': 'no-store',
+        "Content-Type": "image/svg+xml; charset=utf-8",
+        "Cache-Control": "no-store",
       },
     });
   }
@@ -341,18 +345,18 @@ apiRoutes.openapi(getImageRoute, async (c) => {
   const job = await addRenderJob({
     username,
     compositionId,
-    theme: compositionId.includes('light') ? 'light' : 'dark',
-    priority: 'normal',
+    theme: compositionId.includes("light") ? "light" : "dark",
+    priority: "normal",
     installationId,
-    triggeredBy: 'api',
+    triggeredBy: "api",
     requestedAt: Date.now(),
   });
 
   return c.json(
     {
-      status: 'rendering' as const,
+      status: "rendering" as const,
       jobId: job.id!,
-      message: 'Image is being rendered. Check status at /api/status/:jobId',
+      message: "Image is being rendered. Check status at /api/status/:jobId",
       statusUrl: `/api/status/${job.id}`,
     },
     202
@@ -361,15 +365,15 @@ apiRoutes.openapi(getImageRoute, async (c) => {
 
 // POST /api/render
 const renderRoute = createRoute({
-  method: 'post',
-  path: '/render',
-  tags: ['Rendering'],
-  summary: 'Request a new render',
-  description: 'Queue a render job for a specific composition',
+  method: "post",
+  path: "/render",
+  tags: ["Rendering"],
+  summary: "Request a new render",
+  description: "Queue a render job for a specific composition",
   request: {
     body: {
       content: {
-        'application/json': {
+        "application/json": {
           schema: RenderRequestSchema,
         },
       },
@@ -377,17 +381,17 @@ const renderRoute = createRoute({
   },
   responses: {
     200: {
-      description: 'Render job created',
+      description: "Render job created",
       content: {
-        'application/json': {
+        "application/json": {
           schema: RenderSuccessResponseSchema,
         },
       },
     },
     409: {
-      description: 'GitHub App installation required',
+      description: "GitHub App installation required",
       content: {
-        'application/json': {
+        "application/json": {
           schema: InstallRequiredResponseSchema,
         },
       },
@@ -396,7 +400,7 @@ const renderRoute = createRoute({
 });
 
 apiRoutes.openapi(renderRoute, async (c) => {
-  const { username, compositionId, priority } = c.req.valid('json');
+  const { username, compositionId, priority } = c.req.valid("json");
 
   const installationId = await getInstallationId(username);
   if (!installationId) {
@@ -404,7 +408,8 @@ apiRoutes.openapi(renderRoute, async (c) => {
       {
         installRequired: true as const,
         installUrl: env.GITHUB_APP_INSTALL_URL,
-        message: 'GitHub App installation is required to render images for this user.',
+        message:
+          "GitHub App installation is required to render images for this user.",
       },
       409
     );
@@ -413,10 +418,10 @@ apiRoutes.openapi(renderRoute, async (c) => {
   const job = await addRenderJob({
     username,
     compositionId,
-    theme: compositionId.includes('light') ? 'light' : 'dark',
+    theme: compositionId.includes("light") ? "light" : "dark",
     priority,
     installationId,
-    triggeredBy: 'api',
+    triggeredBy: "api",
     requestedAt: Date.now(),
   });
 
@@ -432,15 +437,15 @@ apiRoutes.openapi(renderRoute, async (c) => {
 
 // POST /api/render/bulk
 const bulkRenderRoute = createRoute({
-  method: 'post',
-  path: '/render/bulk',
-  tags: ['Rendering'],
-  summary: 'Request bulk renders',
-  description: 'Queue render jobs for multiple compositions at once',
+  method: "post",
+  path: "/render/bulk",
+  tags: ["Rendering"],
+  summary: "Request bulk renders",
+  description: "Queue render jobs for multiple compositions at once",
   request: {
     body: {
       content: {
-        'application/json': {
+        "application/json": {
           schema: BulkRenderRequestSchema,
         },
       },
@@ -448,17 +453,17 @@ const bulkRenderRoute = createRoute({
   },
   responses: {
     200: {
-      description: 'Render jobs created',
+      description: "Render jobs created",
       content: {
-        'application/json': {
+        "application/json": {
           schema: BulkRenderResponseSchema,
         },
       },
     },
     409: {
-      description: 'GitHub App installation required',
+      description: "GitHub App installation required",
       content: {
-        'application/json': {
+        "application/json": {
           schema: InstallRequiredResponseSchema,
         },
       },
@@ -467,7 +472,7 @@ const bulkRenderRoute = createRoute({
 });
 
 apiRoutes.openapi(bulkRenderRoute, async (c) => {
-  const { username, compositions, theme, priority } = c.req.valid('json');
+  const { username, compositions, theme, priority } = c.req.valid("json");
 
   const installationId = await getInstallationId(username);
   if (!installationId) {
@@ -475,7 +480,8 @@ apiRoutes.openapi(bulkRenderRoute, async (c) => {
       {
         installRequired: true as const,
         installUrl: env.GITHUB_APP_INSTALL_URL,
-        message: 'GitHub App installation is required to render images for this user.',
+        message:
+          "GitHub App installation is required to render images for this user.",
       },
       409
     );
@@ -485,7 +491,7 @@ apiRoutes.openapi(bulkRenderRoute, async (c) => {
 
   if (compositions && compositions.length > 0) {
     compositionsToRender = compositions;
-  } else if (theme === 'all') {
+  } else if (theme === "all") {
     compositionsToRender = [...COMPOSITIONS];
   } else {
     compositionsToRender = COMPOSITIONS.filter((id) => id.includes(theme));
@@ -494,7 +500,7 @@ apiRoutes.openapi(bulkRenderRoute, async (c) => {
   const jobs = await addBulkRenderJobs(username, compositionsToRender, {
     priority,
     installationId,
-    triggeredBy: 'api',
+    triggeredBy: "api",
   });
 
   return c.json(
@@ -513,11 +519,11 @@ apiRoutes.openapi(bulkRenderRoute, async (c) => {
 
 // GET /api/status/:jobId
 const jobStatusRoute = createRoute({
-  method: 'get',
-  path: '/status/{jobId}',
-  tags: ['Jobs'],
-  summary: 'Check render job status',
-  description: 'Get the current status and result of a render job',
+  method: "get",
+  path: "/status/{jobId}",
+  tags: ["Jobs"],
+  summary: "Check render job status",
+  description: "Get the current status and result of a render job",
   request: {
     params: z.object({
       jobId: JobIdParamSchema,
@@ -525,17 +531,17 @@ const jobStatusRoute = createRoute({
   },
   responses: {
     200: {
-      description: 'Job status',
+      description: "Job status",
       content: {
-        'application/json': {
+        "application/json": {
           schema: JobStatusResponseSchema,
         },
       },
     },
     404: {
-      description: 'Job not found',
+      description: "Job not found",
       content: {
-        'application/json': {
+        "application/json": {
           schema: ErrorResponseSchema,
         },
       },
@@ -544,36 +550,39 @@ const jobStatusRoute = createRoute({
 });
 
 apiRoutes.openapi(jobStatusRoute, async (c) => {
-  const { jobId } = c.req.valid('param');
+  const { jobId } = c.req.valid("param");
 
   const status = await getJobStatus(jobId);
 
   if (!status) {
-    return c.json({ error: 'Job not found' }, 404);
+    return c.json({ error: "Job not found" }, 404);
   }
 
-  return c.json({
-    jobId,
-    state: status.state,
-    progress: status.progress,
-    result: status.result,
-    imageUrl: status.result?.imageUrl,
-    error: status.failedReason,
-  }, 200);
+  return c.json(
+    {
+      jobId,
+      state: status.state,
+      progress: status.progress,
+      result: status.result,
+      imageUrl: status.result?.imageUrl,
+      error: status.failedReason,
+    },
+    200
+  );
 });
 
 // GET /api/queue
 const queueStatsRoute = createRoute({
-  method: 'get',
-  path: '/queue',
-  tags: ['Jobs'],
-  summary: 'Get queue statistics',
-  description: 'Returns current queue statistics including job counts by state',
+  method: "get",
+  path: "/queue",
+  tags: ["Jobs"],
+  summary: "Get queue statistics",
+  description: "Returns current queue statistics including job counts by state",
   responses: {
     200: {
-      description: 'Queue statistics',
+      description: "Queue statistics",
       content: {
-        'application/json': {
+        "application/json": {
           schema: QueueStatsResponseSchema,
         },
       },
@@ -585,23 +594,23 @@ apiRoutes.openapi(queueStatsRoute, async (c) => {
   const stats = await getQueueStats();
 
   return c.json({
-    queue: 'render-jobs',
+    queue: "render-jobs",
     stats,
   });
 });
 
 // GET /api/health
 const apiHealthRoute = createRoute({
-  method: 'get',
-  path: '/health',
-  tags: ['Health'],
-  summary: 'API health check',
-  description: 'Simple health check for the API routes',
+  method: "get",
+  path: "/health",
+  tags: ["Health"],
+  summary: "API health check",
+  description: "Simple health check for the API routes",
   responses: {
     200: {
-      description: 'Healthy',
+      description: "Healthy",
       content: {
-        'application/json': {
+        "application/json": {
           schema: HealthResponseSchema,
         },
       },
@@ -610,16 +619,17 @@ const apiHealthRoute = createRoute({
 });
 
 apiRoutes.openapi(apiHealthRoute, (c) => {
-  return c.json({ status: 'healthy' });
+  return c.json({ status: "healthy" });
 });
 
 // GET /api/images/:username
 const listUserImagesRoute = createRoute({
-  method: 'get',
-  path: '/images/{username}',
-  tags: ['Images'],
-  summary: 'List all rendered images for a user',
-  description: 'Returns a list of all rendered images (GIFs) for a given username',
+  method: "get",
+  path: "/images/{username}",
+  tags: ["Images"],
+  summary: "List all rendered images for a user",
+  description:
+    "Returns a list of all rendered images (WebP) for a given username",
   request: {
     params: z.object({
       username: UsernameParamSchema,
@@ -627,9 +637,9 @@ const listUserImagesRoute = createRoute({
   },
   responses: {
     200: {
-      description: 'List of rendered images',
+      description: "List of rendered images",
       content: {
-        'application/json': {
+        "application/json": {
           schema: z.object({
             username: z.string(),
             count: z.number(),
@@ -648,23 +658,23 @@ const listUserImagesRoute = createRoute({
 });
 
 apiRoutes.openapi(listUserImagesRoute, async (c) => {
-  const { username } = c.req.valid('param');
-  
+  const { username } = c.req.valid("param");
+
   const imageKeys = await listUserImages(username);
-  
+
   const images = imageKeys.map((key) => {
-    // Extract compositionId from key (format: images/${username}/${compositionId}.gif)
-    const parts = key.split('/');
+    // Extract compositionId from key (format: images/${username}/${compositionId}.webp)
+    const parts = key.split("/");
     const filename = parts[parts.length - 1];
-    const compositionId = filename.replace(/\.gif$/, '');
-    
+    const compositionId = filename.replace(/\.webp$/, "");
+
     return {
       key,
       compositionId,
       url: getPublicUrl(key),
     };
   });
-  
+
   return c.json({
     username,
     count: images.length,

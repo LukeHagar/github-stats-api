@@ -57,7 +57,7 @@ app.doc("/api/openapi.json", {
     title: "GitHub Stats API",
     version: "1.0.0",
     description:
-      "API for generating animated GitHub statistics GIFs. Renders dynamic visualizations of user GitHub activity, contribution graphs, language breakdowns, and more.",
+      "API for generating animated GitHub statistics WebP images. Renders dynamic visualizations of user GitHub activity, contribution graphs, language breakdowns, and more.",
     contact: {
       name: "GitHub Stats",
     },
@@ -72,7 +72,7 @@ app.doc("/api/openapi.json", {
     },
   ],
   tags: [
-    { name: "Images", description: "Retrieve rendered GIF images" },
+    { name: "Images", description: "Retrieve rendered WebP images" },
     { name: "Rendering", description: "Queue render jobs" },
     { name: "Jobs", description: "Monitor render job status" },
     { name: "Compositions", description: "Available composition templates" },
@@ -96,7 +96,7 @@ app.get(
     metaData: {
       title: "GitHub Stats API Documentation",
       description:
-        "Interactive API documentation for GitHub Stats GIF generation",
+        "Interactive API documentation for GitHub Stats WebP image generation",
     },
   })
 );

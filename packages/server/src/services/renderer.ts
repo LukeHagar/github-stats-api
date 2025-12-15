@@ -9,6 +9,7 @@ import { uploadImage, getImageKey, getPublicUrl } from "./storage";
 import type { UserStats } from "./github";
 import { webpackOverride } from "../../../remotion/src/webpack-override";
 import { getSharedRemotionBrowser } from "./remotion-browser";
+import { convertVideoToWebP } from "./ffmpeg";
 
 // Get current directory
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -18,7 +19,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // This file is at /app/packages/server/src/services, so ../../../remotion resolves to /app/packages/remotion
 const REMOTION_PKG = join(__dirname, "../../../remotion");
 const REMOTION_ENTRY = join(REMOTION_PKG, "src/index.ts");
-const TEMP_DIR = join(__dirname, "../../temp");
+export const TEMP_DIR = join(__dirname, "../../temp");
 const PREBUNDLED_BUNDLE_DIR = join(__dirname, "../../remotion-bundle");
 
 // Cached bundle path
@@ -89,7 +90,9 @@ function ensureTempDir(): void {
 /**
  * Bundle the Remotion project (cached)
  */
-async function getBundlePath(onProgress?: (pct: number) => void): Promise<string> {
+async function getBundlePath(
+  onProgress?: (pct: number) => void
+): Promise<string> {
   // Production: use prebaked bundle produced during Docker build (Option B).
   if (process.env.NODE_ENV === "production") {
     if (!existsSync(PREBUNDLED_BUNDLE_DIR)) {
@@ -127,7 +130,7 @@ async function getBundlePath(onProgress?: (pct: number) => void): Promise<string
 }
 
 /**
- * Render a composition to GIF
+ * Render a composition to H.264 MP4, then convert to WebP
  */
 export async function renderComposition(
   options: RenderOptions
@@ -142,14 +145,17 @@ export async function renderComposition(
 
   const outputPath = join(
     TEMP_DIR,
-    `${username}-${compositionId}-${Date.now()}.gif`
+    `${username}-${compositionId}-${Date.now()}.mp4`
   );
 
   try {
     // Get or create bundle
     console.log(`[render ${username}/${compositionId}] getBundlePath...`);
     const serveUrl = await getBundlePath((pct) => {
-      onProgress?.({ stage: "bundle", progress: Math.max(0, Math.min(1, pct / 100)) });
+      onProgress?.({
+        stage: "bundle",
+        progress: Math.max(0, Math.min(1, pct / 100)),
+      });
     });
     console.log(`[render ${username}/${compositionId}] serveUrl ready`);
 
@@ -176,16 +182,16 @@ export async function renderComposition(
 
     console.log(`Rendering ${compositionId} for ${username}...`);
 
-    // Render to GIF
+    // Render to H.264 MP4
     console.log(
       `[render ${username}/${compositionId}] renderMedia -> ${outputPath}`
     );
     await renderMedia({
       composition,
       serveUrl,
-      codec: "gif",
-      // Important: use PNG frames so alpha is preserved (JPEG frames will matte transparency to white).
-      videoImageFormat: "png",
+      codec: "h264",
+      // Use JPEG frames for faster rendering (no transparency needed)
+      videoImageFormat: "jpeg",
       colorSpace: "srgb",
       puppeteerInstance,
       scale: renderScale,
@@ -195,7 +201,10 @@ export async function renderComposition(
       },
       timeoutInMilliseconds: env.RENDER_TIMEOUT_MS,
       onProgress: ({ progress }) => {
-        onProgress?.({ stage: "renderMedia", progress: Math.max(0, Math.min(1, progress)) });
+        onProgress?.({
+          stage: "renderMedia",
+          progress: Math.max(0, Math.min(1, progress)),
+        });
         if (Math.round(progress * 100) % 25 === 0) {
           console.log(`Render progress: ${Math.round(progress * 100)}%`);
         }
@@ -203,12 +212,26 @@ export async function renderComposition(
     });
     console.log(`[render ${username}/${compositionId}] renderMedia done`);
 
-    // Read the rendered file
+    // Read the rendered MP4 file
     console.log(`[render ${username}/${compositionId}] reading output file`);
-    const gifBuffer = await readFile(outputPath);
+    const mp4Buffer = await readFile(outputPath);
     onProgress?.({ stage: "readOutput", progress: 1 });
     console.log(
-      `[render ${username}/${compositionId}] read ${gifBuffer.length} bytes`
+      `[render ${username}/${compositionId}] read ${mp4Buffer.length} bytes`
+    );
+
+    // Convert MP4 to WebP using FFmpeg
+    console.log(
+      `[render ${username}/${compositionId}] converting MP4 to WebP...`
+    );
+    onProgress?.({ stage: "convert", progress: 0 });
+    const webpBuffer = await convertVideoToWebP(mp4Buffer, {
+      quality: 80,
+      fps: composition.fps,
+    });
+    onProgress?.({ stage: "convert", progress: 1 });
+    console.log(
+      `[render ${username}/${compositionId}] converted to WebP: ${webpBuffer.length} bytes`
     );
 
     // Upload to MinIO
@@ -217,7 +240,7 @@ export async function renderComposition(
       `[render ${username}/${compositionId}] uploading to MinIO key=${imageKey}`
     );
     onProgress?.({ stage: "upload", progress: 0 });
-    await uploadImage(imageKey, gifBuffer, {
+    await uploadImage(imageKey, webpBuffer, {
       "x-amz-meta-username": username,
       "x-amz-meta-composition": compositionId,
       "x-amz-meta-rendered-at": new Date().toISOString(),

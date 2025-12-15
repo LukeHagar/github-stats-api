@@ -1,5 +1,5 @@
-import { Client } from 'minio';
-import { env } from '../config/env';
+import { Client } from "minio";
+import { env } from "../config/env";
 
 // Initialize MinIO client
 const minioClient = new Client({
@@ -23,12 +23,12 @@ export async function ensureBucket(): Promise<void> {
 
     // Set bucket policy to allow public read access for images
     const policy = {
-      Version: '2012-10-17',
+      Version: "2012-10-17",
       Statement: [
         {
-          Effect: 'Allow',
-          Principal: { AWS: ['*'] },
-          Action: ['s3:GetObject'],
+          Effect: "Allow",
+          Principal: { AWS: ["*"] },
+          Action: ["s3:GetObject"],
           Resource: [`arn:aws:s3:::${BUCKET}/*`],
         },
       ],
@@ -41,11 +41,11 @@ export async function ensureBucket(): Promise<void> {
  * Generate storage key for a user's image
  */
 export function getImageKey(username: string, compositionId: string): string {
-  return `images/${username}/${compositionId}.gif`;
+  return `images/${username}/${compositionId}.webp`;
 }
 
 /**
- * Upload rendered GIF to MinIO
+ * Upload rendered WebP to MinIO
  */
 export async function uploadImage(
   key: string,
@@ -53,7 +53,7 @@ export async function uploadImage(
   metadata?: Record<string, string>
 ): Promise<void> {
   await minioClient.putObject(BUCKET, key, buffer, buffer.length, {
-    'Content-Type': 'image/gif',
+    "Content-Type": "image/webp",
     ...metadata,
   });
 }
@@ -61,7 +61,9 @@ export async function uploadImage(
 /**
  * Get a readable stream for an image
  */
-export async function getImageStream(key: string): Promise<NodeJS.ReadableStream> {
+export async function getImageStream(
+  key: string
+): Promise<NodeJS.ReadableStream> {
   return await minioClient.getObject(BUCKET, key);
 }
 
@@ -73,9 +75,9 @@ export async function getImageBuffer(key: string): Promise<Buffer> {
   const chunks: Buffer[] = [];
 
   return new Promise((resolve, reject) => {
-    stream.on('data', (chunk: Buffer) => chunks.push(chunk));
-    stream.on('end', () => resolve(Buffer.concat(chunks)));
-    stream.on('error', reject);
+    stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+    stream.on("end", () => resolve(Buffer.concat(chunks)));
+    stream.on("error", reject);
   });
 }
 
@@ -114,7 +116,10 @@ export async function getImageStats(key: string): Promise<{
 /**
  * Generate a presigned URL for direct access (optional, for CDN bypass)
  */
-export async function getPresignedUrl(key: string, expirySeconds = 3600): Promise<string> {
+export async function getPresignedUrl(
+  key: string,
+  expirySeconds = 3600
+): Promise<string> {
   return await minioClient.presignedGetObject(BUCKET, key, expirySeconds);
 }
 
@@ -123,16 +128,20 @@ export async function getPresignedUrl(key: string, expirySeconds = 3600): Promis
  */
 export function getPublicUrl(key: string): string {
   // We keep MinIO internal and serve images via the API image route.
-  // Key format is always: images/${username}/${compositionId}.gif
-  const parts = key.split('/');
+  // Key format is always: images/${username}/${compositionId}.webp
+  const parts = key.split("/");
   const username = parts.length >= 3 ? parts[1] : undefined;
   const filename = parts.length >= 3 ? parts[2] : undefined;
-  const compositionId = filename?.endsWith('.gif') ? filename.slice(0, -4) : undefined;
+  const compositionId = filename?.endsWith(".webp")
+    ? filename.slice(0, -5)
+    : undefined;
 
-  const base = env.PUBLIC_URL ? env.PUBLIC_URL.replace(/\/+$/, '') : '';
+  const base = env.PUBLIC_URL ? env.PUBLIC_URL.replace(/\/+$/, "") : "";
 
-  if (parts[0] === 'images' && username && compositionId) {
-    return `${base}/api/image/${encodeURIComponent(username)}/${encodeURIComponent(compositionId)}`;
+  if (parts[0] === "images" && username && compositionId) {
+    return `${base}/api/image/${encodeURIComponent(
+      username
+    )}/${encodeURIComponent(compositionId)}`;
   }
 
   throw new Error(`Invalid image key format for public URL: ${key}`);
@@ -183,4 +192,3 @@ export async function listUserImages(username: string): Promise<string[]> {
 
 // Export the client for advanced use cases
 export { minioClient };
-

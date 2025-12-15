@@ -83,7 +83,10 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
       };
     })();
 
-    const toOverallProgress = (stage: string, stageProgress01: number): number => {
+    const toOverallProgress = (
+      stage: string,
+      stageProgress01: number
+    ): number => {
       const p = Math.max(0, Math.min(1, stageProgress01));
       switch (stage) {
         case "bundle":
@@ -93,11 +96,14 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
           // 50..55
           return 50 + p * 5;
         case "renderMedia":
-          // 55..95
-          return 55 + p * 40;
+          // 55..90
+          return 55 + p * 35;
         case "readOutput":
-          // 95..97
-          return 95 + p * 2;
+          // 90..92
+          return 90 + p * 2;
+        case "convert":
+          // 92..97
+          return 92 + p * 5;
         case "upload":
           // 97..99
           return 97 + p * 2;
