@@ -3,7 +3,7 @@ import { Theme, themes, UserStats } from '../../config';
 import { SpotlightEffect } from '../effects/SpotlightEffect';
 import { fadeInAndSlideUp } from '../../lib/animations';
 import { CommitIcon } from '../icons';
-import { cardSettings, effectColors } from '../../settings';
+import { cardSettings, effectColors, commitGraphSettings } from '../../settings';
 
 type AnimationStyle = 'wave' | 'rain' | 'cascade';
 
@@ -14,7 +14,31 @@ interface CommitGraphCardProps {
 }
 
 /**
- * GitHub-style contribution graph with multiple animation styles
+ * Map contribution count to color level (0-4)
+ */
+function getContributionLevel(count: number): number {
+	if (count === 0) return 0;
+	if (count >= 1 && count <= 9) return 1;
+	if (count >= 10 && count <= 19) return 2;
+	if (count >= 20 && count <= 29) return 3;
+	return 4; // 30+
+}
+
+/**
+ * Get month abbreviation from date string
+ */
+function getMonthAbbr(dateStr: string): string {
+	const date = new Date(dateStr);
+	return date.toLocaleDateString('en-US', { month: 'short' });
+}
+
+/**
+ * Get day of week abbreviation (S, M, T, W, T, F, S)
+ */
+const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+/**
+ * GitHub-style contribution graph with real data, month/day labels, and animations
  */
 export function CommitGraphCard({ 
 	userStats, 
@@ -28,35 +52,67 @@ export function CommitGraphCard({
 	const headerAnim = fadeInAndSlideUp(frame, 0);
 	const bgOpacity = theme === 'dark' ? cardSettings.bgOpacityDark : cardSettings.bgOpacityLight;
 
-	// Calculate graph dimensions to fit card width
-	const cardInnerWidth = 450 - (cardSettings.outerPadding * 2) - (cardSettings.padding * 2);
-	const weeks = 30; // More weeks to fill width
-	const gap = 2;
-	const squareSize = Math.floor((cardInnerWidth - (weeks - 1) * gap) / weeks);
-	const squareRadius = 2;
+	// Get real contribution calendar data or generate fallback
+	const calendar = userStats.contributionsCollection?.contributionCalendar;
+	const weeks = calendar?.weeks || [];
+	
+	// Use 53 weeks (full year) - pad or truncate as needed
+	const targetWeeks = commitGraphSettings.weeks;
+	const graphWeeks = weeks.slice(0, targetWeeks);
+	
+	// If we don't have enough weeks, pad with empty weeks
+	while (graphWeeks.length < targetWeeks) {
+		graphWeeks.push({
+			contributionDays: Array(7).fill(null).map(() => ({
+				contributionCount: 0,
+				date: '',
+			})),
+		});
+	}
 
-	const graphWidth = weeks * (squareSize + gap) - gap;
+	// Calculate graph dimensions
+	const cardInnerWidth = 900 - (cardSettings.outerPadding * 2) - (cardSettings.padding * 2);
+	const squareSize = commitGraphSettings.squareSize;
+	const gap = commitGraphSettings.gap;
+	const squareRadius = commitGraphSettings.squareRadius;
+	
+	// Space for day labels on left
+	const dayLabelWidth = 32;
+	// Space for month labels on top
+	const monthLabelHeight = 24;
+	
+	// Graph area dimensions
+	const graphWidth = targetWeeks * (squareSize + gap) - gap;
 	const graphHeight = 7 * (squareSize + gap) - gap;
+	
+	// Total SVG dimensions
+	const svgWidth = dayLabelWidth + graphWidth;
+	const svgHeight = monthLabelHeight + graphHeight;
 
-	// Generate contribution data
-	const generateGraphData = () => {
-		const data: number[][] = [];
+	// Process contribution data into levels
+	const graphData: Array<Array<{ level: number; date: string }>> = [];
+	const monthPositions: Array<{ weekIndex: number; month: string }> = [];
+	
+	let lastMonth = '';
+	graphWeeks.forEach((week, weekIndex) => {
+		const weekData: Array<{ level: number; date: string }> = [];
 		
-		for (let week = 0; week < weeks; week++) {
-			const weekData: number[] = [];
-			for (let day = 0; day < 7; day++) {
-				const seed = week * 7 + day;
-				const baseLevel = Math.sin(seed * 0.3) * 0.5 + 0.5;
-				const variance = Math.cos(seed * 0.7) * 0.3;
-				const level = Math.max(0, Math.min(4, Math.floor((baseLevel + variance) * 5)));
-				weekData.push(level);
+		week.contributionDays.forEach((day, dayIndex) => {
+			const level = getContributionLevel(day.contributionCount || 0);
+			weekData.push({ level, date: day.date || '' });
+			
+			// Track month boundaries for labels (check first day of week)
+			if (dayIndex === 0 && day.date) {
+				const month = getMonthAbbr(day.date);
+				if (month !== lastMonth) {
+					monthPositions.push({ weekIndex, month });
+					lastMonth = month;
+				}
 			}
-			data.push(weekData);
-		}
-		return data;
-	};
-
-	const graphData = generateGraphData();
+		});
+		
+		graphData.push(weekData);
+	});
 
 	const getColor = (level: number) => {
 		switch (level) {
@@ -70,7 +126,7 @@ export function CommitGraphCard({
 	};
 
 	// Center of the graph for spiral calculation
-	const centerX = weeks / 2;
+	const centerX = targetWeeks / 2;
 	const centerY = 3.5; // Middle of 7 days
 
 	// Calculate animation delay based on style
@@ -78,10 +134,10 @@ export function CommitGraphCard({
 		switch (animationStyle) {
 			case 'wave':
 				// Diagonal wave from top-left to bottom-right
-				return (weekIndex + dayIndex) * 0.8;
+				return (weekIndex + dayIndex) * 0.6;
 			case 'rain':
 				// Rain effect - columns fall at different times (deterministic)
-				return weekIndex * 1.2 + random(`rain-${weekIndex}-${dayIndex}`) * 5;
+				return weekIndex * 1.0 + random(`rain-${weekIndex}-${dayIndex}`) * 4;
 			case 'cascade': {
 				// Spiral from center - distance from center determines delay
 				const dx = weekIndex - centerX;
@@ -89,10 +145,10 @@ export function CommitGraphCard({
 				const distance = Math.sqrt(dx * dx + dy * dy);
 				const angle = Math.atan2(dy, dx);
 				// Combine distance and angle for spiral effect
-				return distance * 1.5 + (angle + Math.PI) * 2;
+				return distance * 1.2 + (angle + Math.PI) * 1.5;
 			}
 			default:
-				return (weekIndex + dayIndex) * 0.8;
+				return (weekIndex + dayIndex) * 0.6;
 		}
 	};
 
@@ -115,7 +171,7 @@ export function CommitGraphCard({
 							: `rgba(255, 255, 255, ${bgOpacity})`,
 						borderRadius: cardSettings.borderRadius,
 						padding: cardSettings.padding,
-						paddingBottom: cardSettings.padding + 2,
+						paddingBottom: cardSettings.padding + 4,
 						position: 'relative',
 						overflow: 'hidden',
 						border: `1px solid ${theme === 'dark' ? 'rgba(48, 54, 61, 0.3)' : 'rgba(208, 215, 222, 0.3)'}`,
@@ -132,17 +188,17 @@ export function CommitGraphCard({
 						style={{
 							display: 'flex',
 							alignItems: 'center',
-							gap: 8,
-							marginBottom: 10,
+							gap: 16,
+							marginBottom: 20,
 							position: 'relative',
 							zIndex: 1,
 							...headerAnim,
 						}}
 					>
-						<CommitIcon size={18} color={themeColors.accent} />
+						<CommitIcon size={36} color={themeColors.accent} />
 						<span
 							style={{
-								fontSize: 13,
+								fontSize: 26,
 								fontWeight: 600,
 								color: themeColors.text,
 							}}
@@ -151,7 +207,7 @@ export function CommitGraphCard({
 						</span>
 						<span
 							style={{
-								fontSize: 11,
+								fontSize: 22,
 								color: themeColors.textMuted,
 								marginLeft: 'auto',
 							}}
@@ -172,54 +228,107 @@ export function CommitGraphCard({
 						}}
 					>
 						<svg
-							width={graphWidth}
-							height={graphHeight}
+							width={svgWidth}
+							height={svgHeight}
 							style={{ overflow: 'visible' }}
 						>
-							{graphData.map((week, weekIndex) =>
-								week.map((level, dayIndex) => {
-									const x = weekIndex * (squareSize + gap);
-									const y = dayIndex * (squareSize + gap);
-									const delay = getAnimationDelay(weekIndex, dayIndex);
-									
-									const squareOpacity = interpolate(
-										frame - delay,
-										[0, 12],
-										[0, 1],
-										{ extrapolateRight: 'clamp', extrapolateLeft: 'clamp' }
-									);
-									
-									const squareScale = interpolate(
-										frame - delay,
-										[0, 15],
-										[0, 1],
-										{ extrapolateRight: 'clamp', extrapolateLeft: 'clamp' }
-									);
+							{/* Month Labels */}
+							{monthPositions.map(({ weekIndex, month }, idx) => {
+								const x = dayLabelWidth + weekIndex * (squareSize + gap);
+								const monthOpacity = interpolate(
+									frame - idx * 2,
+									[0, 15],
+									[0, 1],
+									{ extrapolateRight: 'clamp', extrapolateLeft: 'clamp' }
+								);
+								
+								return (
+									<text
+										key={`month-${weekIndex}`}
+										x={x}
+										y={18}
+										fontSize={22}
+										fill={themeColors.textMuted}
+										opacity={monthOpacity}
+										style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif' }}
+									>
+										{month}
+									</text>
+								);
+							})}
 
-									// For rain effect, add a "drop" from top
-									const yOffset = animationStyle === 'rain' 
-										? interpolate(
+							{/* Day Labels */}
+							{dayLabels.map((day, dayIndex) => {
+								const dayOpacity = interpolate(
+									frame - dayIndex * 2,
+									[0, 15],
+									[0, 1],
+									{ extrapolateRight: 'clamp', extrapolateLeft: 'clamp' }
+								);
+								
+								return (
+									<text
+										key={`day-${dayIndex}`}
+										x={dayLabelWidth - 8}
+										y={monthLabelHeight + dayIndex * (squareSize + gap) + squareSize / 2 + 8}
+										fontSize={22}
+										fill={themeColors.textMuted}
+										opacity={dayOpacity}
+										textAnchor="end"
+										style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif' }}
+									>
+										{day}
+									</text>
+								);
+							})}
+
+							{/* Contribution Squares */}
+							<g transform={`translate(${dayLabelWidth}, ${monthLabelHeight})`}>
+								{graphData.map((week, weekIndex) =>
+									week.map(({ level, date }, dayIndex) => {
+										const x = weekIndex * (squareSize + gap);
+										const y = dayIndex * (squareSize + gap);
+										const delay = getAnimationDelay(weekIndex, dayIndex);
+										
+										const squareOpacity = interpolate(
 											frame - delay,
-											[0, 12],
-											[-20, 0],
+											[0, 15],
+											[0, 1],
 											{ extrapolateRight: 'clamp', extrapolateLeft: 'clamp' }
-										)
-										: 0;
+										);
+										
+										const squareScale = interpolate(
+											frame - delay,
+											[0, 18],
+											[0, 1],
+											{ extrapolateRight: 'clamp', extrapolateLeft: 'clamp' }
+										);
 
-									return (
-										<rect
-											key={`${weekIndex}-${dayIndex}`}
-											x={x + (squareSize * (1 - squareScale)) / 2}
-											y={y + yOffset + (squareSize * (1 - squareScale)) / 2}
-											width={squareSize * squareScale}
-											height={squareSize * squareScale}
-											rx={squareRadius}
-											fill={getColor(level)}
-											opacity={squareOpacity}
-										/>
-									);
-								})
-							)}
+										// For rain effect, add a "drop" from top
+										const yOffset = animationStyle === 'rain' 
+											? interpolate(
+												frame - delay,
+												[0, 15],
+												[-30, 0],
+												{ extrapolateRight: 'clamp', extrapolateLeft: 'clamp' }
+											)
+											: 0;
+
+										return (
+											<rect
+												key={`${weekIndex}-${dayIndex}`}
+												x={x + (squareSize * (1 - squareScale)) / 2}
+												y={y + yOffset + (squareSize * (1 - squareScale)) / 2}
+												width={squareSize * squareScale}
+												height={squareSize * squareScale}
+												rx={squareRadius}
+												fill={getColor(level)}
+												opacity={squareOpacity}
+											/>
+										);
+									})
+								)}
+							</g>
 						</svg>
 					</div>
 
@@ -229,28 +338,28 @@ export function CommitGraphCard({
 							display: 'flex',
 							alignItems: 'center',
 							justifyContent: 'flex-end',
-							gap: 3,
-							marginTop: 6,
+							gap: 6,
+							marginTop: 12,
 							position: 'relative',
 							zIndex: 1,
 							...fadeInAndSlideUp(frame, 50),
 						}}
 					>
-						<span style={{ fontSize: 9, color: themeColors.textMuted, marginRight: 3 }}>
+						<span style={{ fontSize: 18, color: themeColors.textMuted, marginRight: 6 }}>
 							Less
 						</span>
 						{[0, 1, 2, 3, 4].map((level) => (
 							<div
 								key={level}
 								style={{
-									width: 8,
-									height: 8,
-									borderRadius: 2,
+									width: 16,
+									height: 16,
+									borderRadius: 4,
 									backgroundColor: getColor(level),
 								}}
 							/>
 						))}
-						<span style={{ fontSize: 9, color: themeColors.textMuted, marginLeft: 3 }}>
+						<span style={{ fontSize: 18, color: themeColors.textMuted, marginLeft: 6 }}>
 							More
 						</span>
 					</div>

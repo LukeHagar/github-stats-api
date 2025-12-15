@@ -65,19 +65,19 @@ export function ReadmeCard({
 	);
 
 	const stats = [
-		{ icon: <StarIcon size={16} />, label: 'Stars', value: userStats.starCount },
-		{ icon: <ForkIcon size={16} />, label: 'Forks', value: userStats.forkCount },
-		{ icon: <CommitIcon size={16} />, label: 'Commits', value: userStats.totalCommits },
-		{ icon: <PullRequestIcon size={16} />, label: 'Pull Requests', value: userStats.totalPullRequests },
-		{ icon: <ViewIcon size={16} />, label: 'Repo Views', value: userStats.repoViews },
-		{ icon: <CodeIcon size={16} />, label: 'Lines Changed', value: userStats.linesOfCodeChanged, format: 'short' as const },
-		{ icon: <ContributionIcon size={16} />, label: 'Contributions', value: userStats.totalContributions },
+		{ icon: <StarIcon size={32} />, label: 'Stars', value: userStats.starCount },
+		{ icon: <ForkIcon size={32} />, label: 'Forks', value: userStats.forkCount },
+		{ icon: <CommitIcon size={32} />, label: 'Commits', value: userStats.totalCommits },
+		{ icon: <PullRequestIcon size={32} />, label: 'Pull Requests', value: userStats.totalPullRequests },
+		{ icon: <ViewIcon size={32} />, label: 'Repo Views', value: userStats.repoViews },
+		{ icon: <CodeIcon size={32} />, label: 'Lines Changed', value: userStats.linesOfCodeChanged, format: 'short' as const },
+		{ icon: <ContributionIcon size={32} />, label: 'Contributions', value: userStats.totalContributions },
 	];
 
 	// Add streak if available
 	if (userStats.contributionStats?.currentStreak) {
 		stats.push({
-			icon: <FireIcon size={16} />,
+			icon: <FireIcon size={32} />,
 			label: 'Current Streak',
 			value: userStats.contributionStats.currentStreak,
 		});
@@ -148,8 +148,8 @@ export function ReadmeCard({
 						style={{
 							display: 'flex',
 							alignItems: 'center',
-							gap: 12,
-							marginBottom: 14,
+							gap: 24,
+							marginBottom: 28,
 							position: 'relative',
 							zIndex: 1,
 							...headerAnimation,
@@ -158,15 +158,15 @@ export function ReadmeCard({
 						<Img
 							src={userStats.avatarUrl}
 							style={{
-								width: 44,
-								height: 44,
+								width: 88,
+								height: 88,
 								borderRadius: '50%',
-								border: `2px solid ${themeColors.border}`,
+								border: `4px solid ${themeColors.border}`,
 							}}
 						/>
 						<div
 							style={{
-								fontSize: 16,
+								fontSize: 32,
 								fontWeight: 600,
 								color: themeColors.text,
 							}}
@@ -180,7 +180,7 @@ export function ReadmeCard({
 						style={{
 							display: 'flex',
 							flexDirection: 'column',
-							gap: 6,
+							gap: 12,
 							position: 'relative',
 							zIndex: 1,
 						}}

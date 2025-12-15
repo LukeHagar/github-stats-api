@@ -44,7 +44,7 @@ export function LanguageBar({
 			style={{
 				display: 'flex',
 				flexDirection: 'column',
-				gap: 4,
+				gap: 8,
 				opacity,
 			}}
 		>
@@ -55,35 +55,35 @@ export function LanguageBar({
 					alignItems: 'center',
 				}}
 			>
-				<div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+				<div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
 					<div
 						style={{
-							width: 10,
-							height: 10,
+							width: 20,
+							height: 20,
 							borderRadius: '50%',
 							backgroundColor: color || themeColors.accent,
 						}}
 					/>
-					<span style={{ fontSize: 12, color: themeColors.text, fontWeight: 500 }}>
+					<span style={{ fontSize: 24, color: themeColors.text, fontWeight: 500 }}>
 						{name}
 					</span>
 				</div>
-				<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+				<div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
 					{showBytes && (
-						<span style={{ fontSize: 11, color: themeColors.textMuted }}>
+						<span style={{ fontSize: 22, color: themeColors.textMuted }}>
 							{formatBytes(value)}
 						</span>
 					)}
-					<span style={{ fontSize: 11, color: themeColors.textMuted, fontWeight: 500 }}>
+					<span style={{ fontSize: 22, color: themeColors.textMuted, fontWeight: 500 }}>
 						{pct.toFixed(1)}%
 					</span>
 				</div>
 			</div>
 			<div
 				style={{
-					height: 6,
+					height: 12,
 					backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-					borderRadius: 3,
+					borderRadius: 6,
 					overflow: 'hidden',
 				}}
 			>
@@ -92,7 +92,7 @@ export function LanguageBar({
 						height: '100%',
 						width: `${barWidth}%`,
 						backgroundColor: color || themeColors.accent,
-						borderRadius: 3,
+						borderRadius: 6,
 					}}
 				/>
 			</div>

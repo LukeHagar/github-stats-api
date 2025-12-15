@@ -63,17 +63,17 @@ export function CommitStreakCard({ userStats, theme = 'dark' }: CommitStreakCard
 						style={{
 							display: 'flex',
 							alignItems: 'center',
-							gap: 8,
-							marginBottom: 12,
+							gap: 16,
+							marginBottom: 24,
 							position: 'relative',
 							zIndex: 1,
 							...headerAnim,
 						}}
 					>
-						<FireIcon size={20} color={themeColors.accent} />
+						<FireIcon size={40} color={themeColors.accent} />
 						<span
 							style={{
-								fontSize: 14,
+								fontSize: 28,
 								fontWeight: 600,
 								color: themeColors.text,
 							}}
@@ -99,7 +99,7 @@ export function CommitStreakCard({ userStats, theme = 'dark' }: CommitStreakCard
 								currentStreak={currentStreak}
 								longestStreak={longestStreak}
 								theme={theme}
-								size={100}
+								size={200}
 							/>
 						</div>
 
@@ -108,46 +108,46 @@ export function CommitStreakCard({ userStats, theme = 'dark' }: CommitStreakCard
 							style={{
 								display: 'flex',
 								flexDirection: 'column',
-								gap: 12,
+								gap: 24,
 								...statsAnim,
 							}}
 						>
 							<div>
 								<div
 									style={{
-										fontSize: 11,
+										fontSize: 22,
 										color: themeColors.textMuted,
 										textTransform: 'uppercase',
-										letterSpacing: '0.5px',
+										letterSpacing: '1px',
 									}}
 								>
 									Longest Streak
 								</div>
 								<div
 									style={{
-										fontSize: 24,
+										fontSize: 48,
 										fontWeight: 700,
 										color: themeColors.text,
 									}}
 								>
 									<AnimatedCounter value={longestStreak} duration={2} startFrame={20} />
-									<span style={{ fontSize: 12, fontWeight: 400, marginLeft: 4 }}>days</span>
+									<span style={{ fontSize: 24, fontWeight: 400, marginLeft: 8 }}>days</span>
 								</div>
 							</div>
 							<div>
 								<div
 									style={{
-										fontSize: 11,
+										fontSize: 22,
 										color: themeColors.textMuted,
 										textTransform: 'uppercase',
-										letterSpacing: '0.5px',
+										letterSpacing: '1px',
 									}}
 								>
 									Most Active Day
 								</div>
 								<div
 									style={{
-										fontSize: 16,
+										fontSize: 32,
 										fontWeight: 600,
 										color: themeColors.accent,
 									}}

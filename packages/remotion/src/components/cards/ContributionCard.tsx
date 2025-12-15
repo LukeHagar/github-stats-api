@@ -68,17 +68,17 @@ export function ContributionCard({ userStats, theme = 'dark' }: ContributionCard
 						style={{
 							display: 'flex',
 							alignItems: 'center',
-							gap: 8,
-							marginBottom: 12,
+							gap: 16,
+							marginBottom: 24,
 							position: 'relative',
 							zIndex: 1,
 							...headerAnim,
 						}}
 					>
-						<ContributionIcon size={20} color={themeColors.accent} />
+						<ContributionIcon size={40} color={themeColors.accent} />
 						<span
 							style={{
-								fontSize: 14,
+								fontSize: 28,
 								fontWeight: 600,
 								color: themeColors.text,
 							}}
@@ -92,7 +92,7 @@ export function ContributionCard({ userStats, theme = 'dark' }: ContributionCard
 						style={{
 							display: 'grid',
 							gridTemplateColumns: 'repeat(4, 1fr)',
-							gap: 8,
+							gap: 16,
 							flex: 1,
 							alignItems: 'center',
 							position: 'relative',
@@ -113,7 +113,7 @@ export function ContributionCard({ userStats, theme = 'dark' }: ContributionCard
 							>
 								<div
 									style={{
-										fontSize: 20,
+										fontSize: 40,
 										fontWeight: 700,
 										color: themeColors.text,
 									}}
@@ -131,10 +131,10 @@ export function ContributionCard({ userStats, theme = 'dark' }: ContributionCard
 								</div>
 								<div
 									style={{
-										fontSize: 10,
+										fontSize: 20,
 										color: themeColors.textMuted,
 										textTransform: 'uppercase',
-										letterSpacing: '0.5px',
+										letterSpacing: '1px',
 									}}
 								>
 									{item.label}

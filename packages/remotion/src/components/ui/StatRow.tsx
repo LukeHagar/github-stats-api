@@ -36,7 +36,7 @@ export function StatRow({
 				display: 'flex',
 				justifyContent: 'space-between',
 				alignItems: 'center',
-				gap: 8,
+				gap: 16,
 				...animation,
 			}}
 		>
@@ -44,17 +44,17 @@ export function StatRow({
 				style={{
 					display: 'flex',
 					alignItems: 'center',
-					gap: 8,
+					gap: 16,
 				}}
 			>
 				{icon && (
-					<div style={{ color: themeColors.accent, width: 18, height: 18 }}>
+					<div style={{ color: themeColors.accent, width: 36, height: 36 }}>
 						{icon}
 					</div>
 				)}
 				<span
 					style={{
-						fontSize: 13,
+						fontSize: 26,
 						color: themeColors.text,
 						whiteSpace: 'nowrap',
 					}}
@@ -64,7 +64,7 @@ export function StatRow({
 			</div>
 			<span
 				style={{
-					fontSize: 13,
+					fontSize: 26,
 					fontWeight: 600,
 					color: themeColors.text,
 					fontVariantNumeric: 'tabular-nums',

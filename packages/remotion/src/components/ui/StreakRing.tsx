@@ -112,7 +112,7 @@ export function StreakRing({
 				>
 					<span
 						style={{
-							fontSize: 28,
+							fontSize: 56,
 							fontWeight: 700,
 							color: themeColors.text,
 						}}
@@ -121,10 +121,10 @@ export function StreakRing({
 					</span>
 					<span
 						style={{
-							fontSize: 10,
+							fontSize: 20,
 							color: themeColors.textMuted,
 							textTransform: 'uppercase',
-							letterSpacing: '0.5px',
+							letterSpacing: '1px',
 						}}
 					>
 						Day Streak

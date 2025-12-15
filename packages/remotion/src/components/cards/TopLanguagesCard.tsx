@@ -66,17 +66,17 @@ export function TopLanguagesCard({
 						style={{
 							display: 'flex',
 							alignItems: 'center',
-							gap: 8,
-							marginBottom: 16,
+							gap: 16,
+							marginBottom: 32,
 							position: 'relative',
 							zIndex: 1,
 							...headerAnim,
 						}}
 					>
-						<CodeIcon size={20} color={themeColors.accent} />
+						<CodeIcon size={40} color={themeColors.accent} />
 						<span
 							style={{
-								fontSize: 14,
+								fontSize: 28,
 								fontWeight: 600,
 								color: themeColors.text,
 							}}
@@ -90,7 +90,7 @@ export function TopLanguagesCard({
 						style={{
 							display: 'flex',
 							flexDirection: 'column',
-							gap: 10,
+							gap: 20,
 							flex: 1,
 							position: 'relative',
 							zIndex: 1,

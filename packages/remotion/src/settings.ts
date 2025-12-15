@@ -140,13 +140,13 @@ export const effectColors = {
 
 export const cardSettings = {
 	/** Border radius in pixels */
-	borderRadius: 12,
+	borderRadius: 24,
 	/** Padding in pixels */
-	padding: 16,
+	padding: 32,
 	/** Outer margin/padding */
-	outerPadding: 12,
+	outerPadding: 24,
 	/** Backdrop blur amount */
-	backdropBlur: 8,
+	backdropBlur: 16,
 	/** Background opacity for dark theme */
 	bgOpacityDark: 0.15,
 	/** Background opacity for light theme */
@@ -160,14 +160,14 @@ export const cardSettings = {
 // =============================================================================
 
 export const commitGraphSettings = {
-	/** Number of weeks to show */
-	weeks: 20,
-	/** Size of each square in pixels */
-	squareSize: 10,
-	/** Gap between squares in pixels */
-	gap: 3,
-	/** Border radius of squares */
-	squareRadius: 2,
+	/** Number of weeks to show (GitHub shows 53 weeks for full year) */
+	weeks: 53,
+	/** Size of each square in pixels (GitHub uses ~11px, doubled for 2x resolution) */
+	squareSize: 22,
+	/** Gap between squares in pixels (GitHub uses 3px, doubled) */
+	gap: 6,
+	/** Border radius of squares (GitHub uses ~2px, doubled) */
+	squareRadius: 4,
 	/** Stagger delay per square in frames */
 	revealStagger: 0.3,
 };
