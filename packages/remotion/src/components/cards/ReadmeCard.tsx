@@ -16,6 +16,7 @@ import {
 	CodeIcon,
 	ViewIcon,
 	FireIcon,
+	FollowerIcon,
 } from '../icons';
 
 type BackgroundEffect = 'gemini' | 'waves';
@@ -67,34 +68,27 @@ export function ReadmeCard({
 	const stats = [
 		{ icon: <StarIcon size={32} />, label: 'Stars', value: userStats.starCount },
 		{ icon: <ForkIcon size={32} />, label: 'Forks', value: userStats.forkCount },
-		{ icon: <CommitIcon size={32} />, label: 'Commits', value: userStats.totalCommits },
+		{ icon: <CommitIcon size={32} />, label: 'Commits', value: userStats.commitCount ?? userStats.totalCommits },
 		{ icon: <PullRequestIcon size={32} />, label: 'Pull Requests', value: userStats.totalPullRequests },
 	];
 
 	// Add followers if available
-	if (userStats.followers !== undefined) {
+	if (userStats.followers !== undefined && userStats.followers > 0) {
 		stats.push({
-			icon: <ContributionIcon size={32} />, // Using ContributionIcon as placeholder for followers
+			icon: <FollowerIcon size={32} />,
 			label: 'Followers',
 			value: userStats.followers,
 		});
 	}
 
-	// Add pull request reviews if available
-	if (userStats.totalPullRequestReviews !== undefined && userStats.totalPullRequestReviews > 0) {
+	// Add repo views if available
+	if (userStats.repoViews !== undefined && userStats.repoViews > 0) {
 		stats.push({
-			icon: <PullRequestIcon size={32} />,
-			label: 'PR Reviews',
-			value: userStats.totalPullRequestReviews,
+			icon: <ViewIcon size={32} />,
+			label: 'Repo Views',
+			value: userStats.repoViews,
 		});
 	}
-
-	// Add repo views
-	stats.push({
-		icon: <ViewIcon size={32} />,
-		label: 'Repo Views',
-		value: userStats.repoViews,
-	});
 
 	// Add lines added and deleted if available
 	if (userStats.linesAdded !== undefined && userStats.linesAdded > 0) {
