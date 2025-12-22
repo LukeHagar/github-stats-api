@@ -42,6 +42,10 @@ services:
   # Create default bucket on startup
   minio-init:
     image: minio/mc:latest
+    labels:
+      - "glance.parent=github-stats"
+      - "glance.name=MinIO Init"
+      - "glance.hide=true"
     depends_on:
       - minio
     entrypoint: >
